@@ -16,3 +16,6 @@ Atul Arun
 <br> Pritika Kannapiran
 <br> Vivek Chenganassery
 <br> Shane George Thomas
+
+## Role
+Each team member will contribute to both frontend and backend development, alternating responsibilities throughout the project sprints.
