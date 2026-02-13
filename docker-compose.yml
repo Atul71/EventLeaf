@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database Service
+  postgres:
+    image: postgres:15-alpine
+    container_name: eventleaf-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-eventleaf_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-eventleaf_password}
+      POSTGRES_DB: ${DB_NAME:-eventleaf_db}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      # Mount schema initialization script
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      # Mount seed data script if it exists
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+      # Persist database data
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-eventleaf_user} -d ${DB_NAME:-eventleaf_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - eventleaf-network
+
+  # pgAdmin for database management (optional but useful)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: eventleaf-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@eventleaf.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - eventleaf-network
+
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  eventleaf-network:
+    driver: bridge
