@@ -1,0 +1,1 @@
+Frontend Tech Stack - React + TypeScript
