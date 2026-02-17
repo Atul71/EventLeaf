@@ -1,0 +1,86 @@
+// @title           EventLeaf API
+// @version         1.0
+// @description     Eco-focused event management API with Green criteria verification
+// @host            localhost:3000
+// @BasePath        /api/v1
+
+package main
+
+import (
+	"context"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"syscall"
+	"time"
+
+	_ "github.com/Atul71/EventLeaf/api/docs" // init registers swagger spec
+	"github.com/Atul71/EventLeaf/api/internal/config"
+	"github.com/Atul71/EventLeaf/api/internal/db"
+	"github.com/Atul71/EventLeaf/api/internal/handler"
+	"github.com/Atul71/EventLeaf/api/internal/repository"
+	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+)
+
+func main() {
+	// Load .env from project root (parent of api/)
+	if envPath, err := filepath.Abs(filepath.Join("..", ".env")); err == nil {
+		_ = godotenv.Load(envPath)
+	}
+	cfg := config.Load()
+
+	ctx := context.Background()
+	database, err := db.New(ctx, cfg.DSN())
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer database.Close()
+
+	eventRepo := repository.NewEventRepository(database)
+	venueRepo := repository.NewVenueRepository(database)
+	ecoAttrRepo := repository.NewEcoAttributeRepository(database)
+	eventHandler := handler.NewEventHandler(eventRepo, venueRepo, ecoAttrRepo)
+
+	router := gin.Default()
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	// Swagger UI at /swagger/index.html
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	v1 := router.Group("/api/v1")
+	{
+		v1.POST("/events", eventHandler.CreateEvent)
+		v1.GET("/eco-attributes", eventHandler.ListEcoAttributes)
+	}
+
+	srv := &http.Server{
+		Addr:    ":" + cfg.AppPort,
+		Handler: router,
+	}
+
+	go func() {
+		log.Printf("Server starting on port %s", cfg.AppPort)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed: %v", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+	log.Println("Server exited")
+}
