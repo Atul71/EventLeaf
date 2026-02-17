@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EventLeaf - My Green Profile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2bee3b",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102212",
+                        "neutral-leaf": "#eef7ee",
+                        "border-leaf": "#cfe7d1",
+                        "text-leaf": "#0d1b0f",
+                        "subtext-leaf": "#4c9a52",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .material-symbols-outlined.fill { font-variation-settings: 'FILL' 1; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-leaf font-display">
+<div class="relative flex min-h-screen flex-col overflow-x-hidden">
+<header class="sticky top-0 z-50 w-full border-b border-border-leaf bg-white/80 dark:bg-background-dark/80 backdrop-blur-md px-6 md:px-20 py-3">
+<div class="mx-auto flex max-w-[1280px] items-center justify-between">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-2">
+<div class="flex size-9 items-center justify-center rounded-lg bg-primary text-text-leaf">
+<span class="material-symbols-outlined fill text-2xl">eco</span>
+</div>
+<h2 class="text-xl font-bold tracking-tight">EventLeaf</h2>
+</div>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-sm font-semibold hover:text-primary transition-colors" href="#">Discover</a>
+<a class="text-sm font-semibold hover:text-primary transition-colors" href="#">Events</a>
+<a class="text-sm font-semibold hover:text-primary transition-colors" href="#">Impact</a>
+</nav>
+</div>
+<div class="flex flex-1 justify-end gap-4 items-center">
+<button class="hidden lg:flex items-center gap-2 px-4 py-2 rounded-lg bg-primary font-bold text-sm text-text-leaf shadow-sm hover:brightness-105 transition-all">
+<span class="material-symbols-outlined text-xl">add</span>
+                    Create Event
+                </button>
+<div class="hidden sm:flex max-w-xs w-full lg:max-w-[200px]">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtext-leaf text-xl">search</span>
+<input class="w-full rounded-lg border-none bg-neutral-leaf py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/50" placeholder="Search..." type="text"/>
+</div>
+</div>
+<button class="flex size-10 items-center justify-center rounded-lg bg-neutral-leaf text-text-leaf hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="size-10 rounded-full bg-cover bg-center border-2 border-primary cursor-pointer" data-alt="Professional portrait of a male user smiling" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC1o3grplRRO5eHkBed9M0tQ5sur273hPulAZmZGqd6fcwGTcBwReNNPCv8mnFdHMJ9NiBwLFtKqIsICOAeo3MuL4vDvJ2ypKnaAiQ54FJr3B7gTDal34zbf1UxlCDPIa6aXkiAPUNW0pNKCkxVxjao2OUFD5ube_IzPWc22lyukb3Ui_8K2pTD9NuFroPP0K4t9JNISrYR0fuPCzzebPEe5tnuVWOZbQp5ubQwN-J4_QkgKz_Se-SDit-ttJOa0e_ewIUpCm47RA')">
+</div>
+</div>
+</div>
+</header>
+<main class="mx-auto w-full max-w-[1280px] px-6 md:px-20 py-8">
+<section class="mb-8 rounded-2xl bg-white dark:bg-[#1a2e1c] p-6 shadow-sm border border-border-leaf">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+<div class="flex items-center gap-6">
+<div class="relative">
+<div class="size-24 md:size-32 rounded-full border-4 border-primary/20 bg-cover bg-center shadow-lg" data-alt="Close up portrait of Alex Greenwood" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDnOzVJfB7xx40z1WVf-qoPjw7WUXx4Qt82hn5m8o31QBxf9XSxKObGW976MJyh05WZVAxF4nFTES2SQy5ZW6RVELPPHYf9zceW8S4ondIFtViysJ_q6xeonlaDMCM3ov3KNtrvkAG6MTDlJHlQ59H8NDjsE0SbqlH1kSTm6KO6m8rR9GbPyowmBagTxQq_rTiZjTjoi8aK6GqGiHBfm4x6cIyTd2PaNn6_tUEuwsHw6_eyPhgv4GknPeBCM8LS4tzVgiehfVv68g')">
+</div>
+<div class="absolute bottom-1 right-1 size-8 rounded-full bg-primary flex items-center justify-center border-2 border-white">
+<span class="material-symbols-outlined text-white text-sm fill">verified</span>
+</div>
+</div>
+<div>
+<h1 class="text-2xl md:text-3xl font-bold">Alex Greenwood</h1>
+<p class="text-subtext-leaf font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">location_on</span> Portland, Oregon
+                        </p>
+<div class="mt-3 flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-neutral-leaf text-subtext-leaf rounded-full text-xs font-bold uppercase tracking-wider">Eco-Enthusiast</span>
+<span class="px-3 py-1 bg-primary/10 text-text-leaf border border-primary/20 rounded-full text-xs font-bold">Join Date: June 2023</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-center md:items-end gap-3">
+<div class="bg-gradient-to-br from-primary to-[#1dbb2b] p-4 rounded-xl text-text-leaf shadow-md flex flex-col items-center w-full md:w-auto min-w-[180px]">
+<span class="text-xs font-bold uppercase tracking-tighter opacity-80">Sustainability Score</span>
+<span class="text-4xl font-black">850</span>
+<div class="w-full bg-black/10 h-1.5 mt-2 rounded-full overflow-hidden">
+<div class="bg-white h-full" style="width: 85%"></div>
+</div>
+<span class="text-[10px] mt-1 font-bold">92nd Percentile of Users</span>
+</div>
+<div class="flex flex-wrap gap-2 w-full justify-center md:justify-end">
+<button class="flex items-center gap-2 px-6 py-2 rounded-lg bg-primary font-bold text-sm text-text-leaf shadow-md hover:brightness-105 transition-all lg:hidden">
+<span class="material-symbols-outlined text-xl">add</span>
+                            Create Event
+                        </button>
+<button class="px-4 py-2 rounded-lg bg-neutral-leaf font-bold text-sm hover:bg-border-leaf transition-colors">Edit Profile</button>
+<button class="px-4 py-2 rounded-lg border-2 border-primary/30 font-bold text-sm hover:bg-primary/5 transition-all">Share Impact</button>
+</div>
+</div>
+</div>
+</section>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<div class="lg:col-span-8 space-y-6">
+<div class="flex border-b border-border-leaf overflow-x-auto">
+<button class="whitespace-nowrap px-6 py-4 text-sm font-bold border-b-2 border-primary text-text-leaf flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">confirmation_number</span>
+                        My Tickets
+                    </button>
+<button class="whitespace-nowrap px-6 py-4 text-sm font-semibold text-subtext-leaf border-b-2 border-transparent hover:text-text-leaf flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">event_available</span>
+                        My Events
+                    </button>
+<button class="whitespace-nowrap px-6 py-4 text-sm font-semibold text-subtext-leaf border-b-2 border-transparent hover:text-text-leaf flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">favorite</span>
+                        Saved
+                    </button>
+<button class="whitespace-nowrap px-6 py-4 text-sm font-semibold text-subtext-leaf border-b-2 border-transparent hover:text-text-leaf flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">settings</span>
+                        Settings
+                    </button>
+</div>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<h3 class="text-lg font-bold">Upcoming Events</h3>
+<button class="text-sm font-bold text-subtext-leaf hover:text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">filter_list</span> Filter
+                        </button>
+</div>
+<div class="group relative overflow-hidden rounded-xl bg-white dark:bg-[#1a2e1c] p-5 shadow-sm border border-border-leaf flex items-center gap-4 transition-all hover:shadow-md hover:border-primary/40">
+<div class="size-20 rounded-lg bg-cover bg-center" data-alt="Lush green city park with modern architecture" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAXaf7r5E82omvGNLSFSsKstOAPPdjuGdb3tpCzVwSGEEyNwmdJdg97wKlrlIOFArmIR6UkbzeeZIQ2ryHZcm5zKMNsbgYfKYzlXwAA2T7QZ_A53D8tvGh9Fg-9Ou3GvIhL8E5eK7UkyYiMqA5JK8BohK3qnzcXM3UWgSH8AXeWPvWMWt0mM5wcHAdo69mMtL15SBikFxS7aolm3dRytp6G8A-crgK3pHOl1z0Aj9HNzhDpE-KUmj8PFiJmY5eorX_l1N0kFQNNHg')">
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<div>
+<h4 class="font-bold text-lg group-hover:text-primary transition-colors">Global Green Summit 2024</h4>
+<p class="text-sm text-subtext-leaf flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">calendar_month</span> Oct 12, 2024 • 09:00 AM
+                                    </p>
+<p class="text-sm text-subtext-leaf flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">location_on</span> Oregon Convention Center
+                                    </p>
+</div>
+<span class="bg-neutral-leaf text-[10px] font-bold px-2 py-1 rounded text-subtext-leaf uppercase">Standard Pass</span>
+</div>
+</div>
+<div class="flex flex-col items-center gap-2 pl-4 border-l border-border-leaf">
+<button class="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all">
+<span class="material-symbols-outlined text-3xl font-light">qr_code_2</span>
+</button>
+<span class="text-[10px] font-bold text-subtext-leaf uppercase">View QR</span>
+</div>
+</div>
+<div class="group relative overflow-hidden rounded-xl bg-white dark:bg-[#1a2e1c] p-5 shadow-sm border border-border-leaf flex items-center gap-4 transition-all hover:shadow-md hover:border-primary/40">
+<div class="size-20 rounded-lg bg-cover bg-center" data-alt="Vegetable garden beds with vibrant green plants" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAI0lRqLsSz2FJaw5YB6CrMLPzpvdHolIt9N-arrgNnWrnaYgygcHQCT23A6w30wFTP45TQqbmc64j9MrCtwU3L3BVokhU_SHW-E0H3tMgVrRtcTkH8_P21dCgOpC9mcWMI21FFw0Jgho8vErlwjEcibhASugfMTB1jsTY6Mk5JDWLD98-lyedhnlo-PbUonQ_ySSFZ_pHxs2XC0k8u1L8r6MMRhEIqX5jG0tHGPPqN2-5pmhsJePyvDb5UD_IXkKAynmuNdJy_-g')">
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<div>
+<h4 class="font-bold text-lg group-hover:text-primary transition-colors">Urban Permaculture Workshop</h4>
+<p class="text-sm text-subtext-leaf flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">calendar_month</span> Nov 05, 2024 • 02:00 PM
+                                    </p>
+<p class="text-sm text-subtext-leaf flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">location_on</span> Community Garden Annex
+                                    </p>
+</div>
+<span class="bg-neutral-leaf text-[10px] font-bold px-2 py-1 rounded text-subtext-leaf uppercase">VIP Guest</span>
+</div>
+</div>
+<div class="flex flex-col items-center gap-2 pl-4 border-l border-border-leaf">
+<button class="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all">
+<span class="material-symbols-outlined text-3xl font-light">qr_code_2</span>
+</button>
+<span class="text-[10px] font-bold text-subtext-leaf uppercase">View QR</span>
+</div>
+</div>
+</div>
+<div class="pt-4">
+<button class="w-full py-3 rounded-xl border-2 border-dashed border-border-leaf text-subtext-leaf font-semibold text-sm hover:bg-white hover:border-primary transition-all">
+                        View 12 Past Digital Tickets
+                    </button>
+</div>
+</div>
+<div class="lg:col-span-4 space-y-6">
+<div class="bg-white dark:bg-[#1a2e1c] rounded-2xl p-6 shadow-sm border border-border-leaf">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-bold text-lg">My Eco Impact</h3>
+<span class="material-symbols-outlined text-primary fill">auto_awesome</span>
+</div>
+<div class="space-y-4">
+<div class="rounded-xl bg-neutral-leaf p-4 border border-primary/10">
+<div class="flex items-center gap-3 mb-1">
+<div class="size-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-xl">description</span>
+</div>
+<p class="text-sm font-bold opacity-80 uppercase tracking-tight">Paper Saved</p>
+</div>
+<div class="flex items-end gap-2">
+<span class="text-3xl font-black">124</span>
+<span class="text-sm font-bold text-subtext-leaf pb-1">Sheets</span>
+<span class="ml-auto text-xs font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">+12%</span>
+</div>
+</div>
+<div class="rounded-xl bg-neutral-leaf p-4 border border-primary/10">
+<div class="flex items-center gap-3 mb-1">
+<div class="size-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-xl">co2</span>
+</div>
+<p class="text-sm font-bold opacity-80 uppercase tracking-tight">Carbon Offset</p>
+</div>
+<div class="flex items-end gap-2">
+<span class="text-3xl font-black">45.2</span>
+<span class="text-sm font-bold text-subtext-leaf pb-1">kg CO₂</span>
+<span class="ml-auto text-xs font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">+5.1%</span>
+</div>
+</div>
+<div class="rounded-xl bg-neutral-leaf p-4 border border-primary/10">
+<div class="flex items-center gap-3 mb-1">
+<div class="size-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-xl">forest</span>
+</div>
+<p class="text-sm font-bold opacity-80 uppercase tracking-tight">Trees Planted</p>
+</div>
+<div class="flex items-end gap-2">
+<span class="text-3xl font-black">12</span>
+<span class="text-sm font-bold text-subtext-leaf pb-1">Saplings</span>
+<span class="ml-auto text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">New Milestone</span>
+</div>
+</div>
+</div>
+<div class="mt-8 pt-6 border-t border-border-leaf">
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined text-text-leaf">military_tech</span>
+<h4 class="font-bold">Eco-Rank: Oak</h4>
+</div>
+<div class="w-full bg-neutral-leaf h-3 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 75%"></div>
+</div>
+<p class="text-[11px] font-semibold text-subtext-leaf mt-2">1,250 points until 'Giant Sequoia' rank</p>
+</div>
+</div>
+<div class="bg-background-dark text-white rounded-2xl p-6 shadow-xl relative overflow-hidden">
+<div class="absolute -top-4 -right-4 size-24 bg-primary/20 rounded-full blur-2xl"></div>
+<h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">cloud</span>
+                        Footprint Detail
+                    </h3>
+<div class="space-y-3">
+<div class="flex justify-between text-sm">
+<span class="opacity-70">Travel Impact</span>
+<span class="font-bold">Low (12kg)</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="opacity-70">Event Dining</span>
+<span class="font-bold">Vegan Opted</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="opacity-70">Merch Impact</span>
+<span class="font-bold">Digital Only</span>
+</div>
+</div>
+<button class="w-full mt-6 py-2.5 rounded-lg bg-primary text-text-leaf font-bold text-sm shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform">
+                        Full Sustainability Report
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<div class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+<div class="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl relative">
+<button class="absolute top-4 right-4 text-subtext-leaf">
+<span class="material-symbols-outlined">close</span>
+</button>
+<h3 class="text-xl font-bold mb-1">Your Digital Ticket</h3>
+<p class="text-sm text-subtext-leaf mb-6">Global Green Summit 2024</p>
+<div class="bg-neutral-leaf p-6 rounded-xl inline-block mb-6 border-2 border-border-leaf">
+<img alt="QR Code for Event Entry" class="mx-auto" data-alt="Digital QR Code for event access" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDWtW5ZKqOExTNPyI1rhkfCxtgxo-b-6j2naSx60wvoA6KB5Kk61hx3ZGsb_bi0Ah6XjSAeC7mtc_Rsl7q26sbPjDQFb_LmAgDmNFVgDjSg8oMp73I-dWn5ZoloSUxRc8RysmkkQLWxkXUspbXTejWKzddwOx8aNOA_K0LdLcEg58PUac0CtGdc_YMIKiUZwHkIB7Fhms56dW6dI7bu7D8VMyqEvKkiaaZ2dhTkj97muGImoqNIqXA3Kssut41usUd9hbEaIyh7bw"/>
+</div>
+<div class="text-left space-y-2 mb-6">
+<div class="flex justify-between text-sm"><span class="opacity-60">Attendee</span> <span class="font-bold">Alex Greenwood</span></div>
+<div class="flex justify-between text-sm"><span class="opacity-60">Ticket ID</span> <span class="font-bold">#EF-88921-X</span></div>
+</div>
+<button class="w-full bg-primary py-3 rounded-xl font-bold text-text-leaf shadow-md">Download to Wallet</button>
+</div>
+</div>
+</div>
+
+</body></html>
