@@ -63,7 +63,7 @@ export function LoginPage() {
               className="space-y-6"
               onSubmit={(e) => {
                 e.preventDefault();
-                navigate("/profile");
+                navigate("/organizer");
               }}
             >
               <div className="space-y-2">
@@ -160,11 +160,17 @@ export function LoginPage() {
                 </a>
               </div>
             </div>
-            <div className="pt-4 text-center">
+            <div className="pt-4 text-center space-y-2">
               <p className="text-sm text-subtext-leaf dark:text-white/60">
                 Don't have an account?{" "}
                 <Link to="/signup" className="font-bold text-primary hover:underline ml-1">
                   Create an Account
+                </Link>
+              </p>
+              <p className="text-xs text-subtext-leaf dark:text-white/50">
+                Attendee?{" "}
+                <Link to="/profile" className="font-semibold text-primary hover:underline">
+                  View my profile
                 </Link>
               </p>
             </div>
