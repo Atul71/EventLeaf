@@ -1,13 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Logo } from "../components/Logo";
-
-const navItems = [
-  { path: "/organizer", icon: "dashboard", label: "Overview" },
-  { path: "/organizer/events", icon: "event", label: "My Events" },
-  { path: "/organizer/venues", icon: "location_on", label: "Browse Sustainable Venues" },
-  { path: "/organizer/vendors", icon: "storefront", label: "Eco-Vendors" },
-  { path: "/organizer/impact", icon: "analytics", label: "Impact Reports" },
-];
+import { OrganizerSidebar } from "../components/organizer/OrganizerSidebar";
 
 type CreateEventState = { selectedVenue?: { id: string; name: string; location: string } };
 
@@ -21,51 +13,13 @@ export function OrganizerPlaceholderPage() {
       ? "Create eco-friendly event"
       : location.pathname === "/organizer/events"
         ? "My Events"
-        : location.pathname === "/organizer/vendors"
-          ? "Eco-Vendors"
-          : location.pathname === "/organizer/impact"
-            ? "Impact Reports"
-            : location.pathname === "/organizer/settings"
-              ? "Account Settings"
-              : "Page";
+        : location.pathname === "/organizer/settings"
+          ? "Account Settings"
+          : "Page";
 
   return (
     <div className="flex min-h-screen bg-background-light dark:bg-background-dark text-text-leaf">
-      <aside className="w-72 border-r border-border-green bg-white dark:bg-[#152a17] hidden lg:flex flex-col sticky top-0 h-screen">
-        <div className="p-6">
-          <Logo />
-        </div>
-        <nav className="flex-1 px-4 py-4 space-y-1">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                  isActive
-                    ? "bg-primary/10 text-text-leaf font-semibold border-l-4 border-primary"
-                    : "text-subtext-leaf hover:bg-background-light dark:hover:bg-white/5"
-                }`}
-              >
-                <span className={`material-symbols-outlined ${isActive ? "fill" : ""}`}>
-                  {item.icon}
-                </span>
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="p-4 border-t border-border-green">
-          <Link
-            to="/organizer/settings"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-subtext-leaf hover:bg-background-light dark:hover:bg-white/5 transition-colors"
-          >
-            <span className="material-symbols-outlined">settings</span>
-            <span>Account Settings</span>
-          </Link>
-        </div>
-      </aside>
+      <OrganizerSidebar />
       <main className="flex-1 flex items-center justify-center p-8">
         <div className="text-center max-w-md">
           <span className="material-symbols-outlined text-6xl text-primary/50 mb-4 block">

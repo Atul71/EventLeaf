@@ -1,37 +1,24 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Logo } from "../components/Logo";
 
 export function SignupPage() {
-  const [role, setRole] = useState<"attendee" | "organizer">("attendee");
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
+  const leafSvg = (
+    <svg className="w-[400px] h-[400px]" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <path d="M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8,20C19,20 22,3 22,3C21,5 14,5.25 9,6.25C4,7.25 2,11.5 2,13.5C2,15.5 3.75,17.25 3.75,17.25C7,8 17,8 17,8Z" />
+    </svg>
+  );
+
   return (
     <div className="bg-background-light dark:bg-background-dark min-h-screen flex flex-col relative overflow-x-hidden">
-      <div
-        className="fixed top-[-50px] left-[-50px] opacity-[0.04] rotate-[-15deg] pointer-events-none z-0 text-primary"
-        aria-hidden
-      >
-        <svg className="w-[400px] h-[400px]" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8,20C19,20 22,3 22,3C21,5 14,5.25 9,6.25C4,7.25 2,11.5 2,13.5C2,15.5 3.75,17.25 3.75,17.25C7,8 17,8 17,8Z" />
-        </svg>
-      </div>
-      <div
-        className="fixed bottom-[-50px] right-[-50px] opacity-[0.04] rotate-[165deg] pointer-events-none z-0 text-primary"
-        aria-hidden
-      >
-        <svg className="w-[400px] h-[400px]" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8,20C19,20 22,3 22,3C21,5 14,5.25 9,6.25C4,7.25 2,11.5 2,13.5C2,15.5 3.75,17.25 3.75,17.25C7,8 17,8 17,8Z" />
-        </svg>
-      </div>
+      <div className="fixed top-[-50px] left-[-50px] opacity-[0.04] rotate-[-15deg] pointer-events-none z-0 text-primary">{leafSvg}</div>
+      <div className="fixed bottom-[-50px] right-[-50px] opacity-[0.04] rotate-[165deg] pointer-events-none z-0 text-primary">{leafSvg}</div>
 
       <nav className="relative z-10 w-full px-6 lg:px-20 py-6 flex justify-between items-center bg-transparent">
-        <Link to="/" className="flex items-center gap-2 group cursor-pointer">
-          <div className="bg-primary p-1.5 rounded-lg shadow-sm">
-            <span className="material-symbols-outlined text-white text-2xl font-bold">eco</span>
-          </div>
-          <span className="text-xl font-extrabold tracking-tight text-text-leaf dark:text-white">EventLeaf</span>
-        </Link>
+        <Logo />
         <div className="flex items-center gap-4">
           <span className="text-sm text-subtext-leaf dark:text-primary/80 hidden md:inline">Already a member?</span>
           <Link
@@ -50,50 +37,6 @@ export function SignupPage() {
             <p className="text-subtext-leaf dark:text-primary/70 text-sm">
               Join the eco-friendly event management movement today.
             </p>
-          </div>
-
-          <div className="mb-8">
-            <p className="text-sm font-semibold text-text-leaf dark:text-white mb-3">I want to join as an:</p>
-            <div className="flex p-1 bg-[#f0f7f1] dark:bg-[#0d1b0f] rounded-xl border border-border-green dark:border-primary/10">
-              <label className="flex-1 cursor-pointer">
-                <input
-                  type="radio"
-                  name="role"
-                  value="attendee"
-                  checked={role === "attendee"}
-                  onChange={() => setRole("attendee")}
-                  className="sr-only"
-                />
-                <span
-                  className={`py-2.5 text-center rounded-lg text-sm font-bold transition-all block ${
-                    role === "attendee"
-                      ? "bg-primary text-text-leaf dark:text-black"
-                      : "text-subtext-leaf dark:text-primary/60 hover:text-text-leaf"
-                  }`}
-                >
-                  Attendee
-                </span>
-              </label>
-              <label className="flex-1 cursor-pointer">
-                <input
-                  type="radio"
-                  name="role"
-                  value="organizer"
-                  checked={role === "organizer"}
-                  onChange={() => setRole("organizer")}
-                  className="sr-only"
-                />
-                <span
-                  className={`py-2.5 text-center rounded-lg text-sm font-bold transition-all block ${
-                    role === "organizer"
-                      ? "bg-primary text-text-leaf dark:text-black"
-                      : "text-subtext-leaf dark:text-primary/60 hover:text-text-leaf"
-                  }`}
-                >
-                  Organizer
-                </span>
-              </label>
-            </div>
           </div>
 
           <form
@@ -152,7 +95,7 @@ export function SignupPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  <span className="material-symbols-outlined text-xl">visibility</span>
+                  <span className="material-symbols-outlined text-xl">{showPassword ? "visibility_off" : "visibility"}</span>
                 </button>
               </div>
             </div>
