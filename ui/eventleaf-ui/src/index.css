@@ -1,0 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0');
+
+@import "tailwindcss";
+
+/* Use class-based dark mode so we default to light; dark only applies when .dark is on an ancestor */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary: #2bee3b;
+  --color-background-light: #f6f8f6;
+  --color-background-dark: #102212;
+  --color-neutral-leaf: #4c9a52;
+  --color-soft-green: #e7f3e8;
+  --color-border-green: #cfe7d1;
+  --color-border-leaf: #cfe7d1;
+  --color-text-leaf: #0d1b0f;
+  --color-subtext-leaf: #4c9a52;
+  --color-neutral-bg: #eef7ee;
+  --font-display: "Plus Jakarta Sans", sans-serif;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-full: 9999px;
+}
+
+body {
+  font-family: var(--font-display);
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+.material-symbols-outlined.fill {
+  font-variation-settings: 'FILL' 1;
+}
