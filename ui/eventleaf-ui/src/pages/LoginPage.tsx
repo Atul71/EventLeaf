@@ -1,16 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Logo } from "../components/Logo";
 
 const FOREST_IMAGE =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuCpEmWVelUwcSzZyAK8us3qQoVjVA2FU20baHb23V3inyNgsg-uT5kFBPivpMvLPSPoz5znxlhSwC-tfbWc8DTke5rOnkIEPX5_cfq-J36i5bi5e6i_YhkqiUcI-6e5Du9o0kEgzxJvCrju15ctOvMD35TcTM-jTB3x13_cJwvs6Nfx--QBPCj7XgXm3tsMOOGgxJ0BBNtAevu1wTu90_PbL3_HD2VaBbtxOcSXrtpHCR0ZUnftfc5-U7mAfVKg71wBlEl5kf9Teg";
-
-function EcoLogo() {
-  return (
-    <svg fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className="size-8 text-primary">
-      <path d="M36.7273 44C33.9891 44 31.6043 39.8386 30.3636 33.69C29.123 39.8386 26.7382 44 24 44C21.2618 44 18.877 39.8386 17.6364 33.69C16.3957 39.8386 14.0109 44 11.2727 44C7.25611 44 4 35.0457 4 24C4 12.9543 7.25611 4 11.2727 4C14.0109 4 16.3957 8.16144 17.6364 14.31C18.877 8.16144 21.2618 4 24 4C26.7382 4 29.123 8.16144 30.3636 14.31C31.6043 8.16144 33.9891 4 36.7273 4C40.7439 4 44 12.9543 44 24C44 35.0457 40.7439 44 36.7273 44Z" />
-    </svg>
-  );
-}
 
 export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -29,10 +22,7 @@ export function LoginPage() {
             <div className="absolute inset-0 bg-gradient-to-t from-[#102212] via-transparent to-transparent opacity-80" />
           </div>
           <div className="relative z-10 flex flex-col justify-between p-16 w-full h-full">
-            <div className="flex items-center gap-3 text-white">
-              <EcoLogo />
-              <span className="text-2xl font-bold tracking-tight">EventLeaf</span>
-            </div>
+            <Logo className="text-white [&_h2]:text-white [&_div]:text-white" />
             <div className="max-w-md">
               <h1 className="text-white text-4xl font-black leading-tight tracking-tight mb-6">
                 The greatest threat to our planet is the belief that someone else will save it.
@@ -50,10 +40,7 @@ export function LoginPage() {
         <div className="flex-1 flex flex-col justify-center items-center p-8 bg-background-light dark:bg-background-dark">
           <div className="w-full max-w-md space-y-8">
             <div className="lg:hidden flex justify-center mb-8">
-              <div className="flex items-center gap-2 text-background-dark dark:text-white">
-                <EcoLogo />
-                <span className="text-xl font-bold">EventLeaf</span>
-              </div>
+              <Logo />
             </div>
             <div className="text-center lg:text-left">
               <h2 className="text-3xl font-bold text-text-leaf dark:text-white tracking-tight">Welcome back</h2>
@@ -63,7 +50,7 @@ export function LoginPage() {
               className="space-y-6"
               onSubmit={(e) => {
                 e.preventDefault();
-                navigate("/organizer");
+                navigate("/profile");
               }}
             >
               <div className="space-y-2">
@@ -168,9 +155,9 @@ export function LoginPage() {
                 </Link>
               </p>
               <p className="text-xs text-subtext-leaf dark:text-white/50">
-                Attendee?{" "}
-                <Link to="/profile" className="font-semibold text-primary hover:underline">
-                  View my profile
+                Organizer?{" "}
+                <Link to="/organizer" className="font-semibold text-primary hover:underline">
+                  Go to Organizer Dashboard
                 </Link>
               </p>
             </div>
