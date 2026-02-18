@@ -10,6 +10,34 @@ const AVATAR2 =
 const AVATAR3 =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuAMUUdaU-3JpLsWV9JhvkEyZ23zlfvdw0gLiOJTgC9RIig_OfyTb6hjmf8J1m9W1_IJWtjjT_cZFRY8RUxOc2zoz8T_VB3HCIC4SwLCciI3-C6AfVbApplb1nOvVnYpXvsbPOxfEBgtNjqHKCSLbw-Ug33AaYiODeDjBC7KK1FWAymo4w6jwr7Chvl0v3Hr13XLEhJr1G8F1u4TRhR50PTM0JVGkZBjiOAFrUIl3bXpuEO2ptyUTBXeOLlkZumReY7o3gRvF7U-rA";
 
+const STATS = [
+  { label: "Paper Saved", value: "1.2M", change: "+12%" },
+  { label: "Carbon Offset", value: "450T", change: "+8%" },
+  { label: "Eco-Events", value: "15K+", change: "+25%" },
+  { label: "Community Growth", value: "92%", change: "↑" },
+] as const;
+
+const FEATURES = [
+  {
+    icon: "confirmation_number",
+    title: "Digital Ticketing",
+    description:
+      "Eliminate paper waste completely with high-speed QR entries, digital-first check-ins, and automated mobile passes.",
+  },
+  {
+    icon: "verified_user",
+    title: "Eco-Labeling",
+    description:
+      "Certify your event's sustainability with our built-in auditor, green checklists, and verified impact badges for your brand.",
+  },
+  {
+    icon: "bar_chart_4_bars",
+    title: "Real-time Analytics",
+    description:
+      "Track live attendance, resource consumption, and your exact carbon footprint in one integrated, beautiful dashboard.",
+  },
+] as const;
+
 export function LandingPage() {
   return (
     <div className="bg-background-light dark:bg-background-dark text-text-leaf selection:bg-primary/30 min-h-screen">
@@ -102,30 +130,14 @@ export function LandingPage() {
 
         <section id="features" className="py-12 border-y border-border-green dark:border-white/10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="text-center md:text-left">
-              <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Paper Saved</p>
-              <p className="text-3xl font-black dark:text-white">
-                1.2M <span className="text-primary text-xl tracking-tight">+12%</span>
-              </p>
-            </div>
-            <div className="text-center md:text-left">
-              <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Carbon Offset</p>
-              <p className="text-3xl font-black dark:text-white">
-                450T <span className="text-primary text-xl tracking-tight">+8%</span>
-              </p>
-            </div>
-            <div className="text-center md:text-left">
-              <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Eco-Events</p>
-              <p className="text-3xl font-black dark:text-white">
-                15K+ <span className="text-primary text-xl tracking-tight">+25%</span>
-              </p>
-            </div>
-            <div className="text-center md:text-left">
-              <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">Community Growth</p>
-              <p className="text-3xl font-black dark:text-white">
-                92% <span className="text-primary text-xl tracking-tight">↑</span>
-              </p>
-            </div>
+            {STATS.map(({ label, value, change }) => (
+              <div key={label} className="text-center md:text-left">
+                <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">{label}</p>
+                <p className="text-3xl font-black dark:text-white">
+                  {value} <span className="text-primary text-xl tracking-tight">{change}</span>
+                </p>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -138,36 +150,18 @@ export function LandingPage() {
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="group p-8 rounded-2xl bg-white dark:bg-white/5 border border-border-green dark:border-white/10 hover:border-primary transition-all hover:shadow-xl">
-              <div className="w-12 h-12 bg-soft-green dark:bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined font-bold">confirmation_number</span>
+            {FEATURES.map(({ icon, title, description }) => (
+              <div
+                key={title}
+                className="group p-8 rounded-2xl bg-white dark:bg-white/5 border border-border-green dark:border-white/10 hover:border-primary transition-all hover:shadow-xl"
+              >
+                <div className="w-12 h-12 bg-soft-green dark:bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined font-bold">{icon}</span>
+                </div>
+                <h3 className="text-xl font-bold mb-3 dark:text-white">{title}</h3>
+                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">{description}</p>
               </div>
-              <h3 className="text-xl font-bold mb-3 dark:text-white">Digital Ticketing</h3>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                Eliminate paper waste completely with high-speed QR entries, digital-first check-ins, and automated
-                mobile passes.
-              </p>
-            </div>
-            <div className="group p-8 rounded-2xl bg-white dark:bg-white/5 border border-border-green dark:border-white/10 hover:border-primary transition-all hover:shadow-xl">
-              <div className="w-12 h-12 bg-soft-green dark:bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined font-bold">verified_user</span>
-              </div>
-              <h3 className="text-xl font-bold mb-3 dark:text-white">Eco-Labeling</h3>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                Certify your event's sustainability with our built-in auditor, green checklists, and verified impact
-                badges for your brand.
-              </p>
-            </div>
-            <div className="group p-8 rounded-2xl bg-white dark:bg-white/5 border border-border-green dark:border-white/10 hover:border-primary transition-all hover:shadow-xl">
-              <div className="w-12 h-12 bg-soft-green dark:bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined font-bold">bar_chart_4_bars</span>
-              </div>
-              <h3 className="text-xl font-bold mb-3 dark:text-white">Real-time Analytics</h3>
-              <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                Track live attendance, resource consumption, and your exact carbon footprint in one integrated, beautiful
-                dashboard.
-              </p>
-            </div>
+            ))}
           </div>
         </section>
 
@@ -202,58 +196,26 @@ export function LandingPage() {
         </section>
       </main>
 
-      <footer className="bg-white dark:bg-background-dark border-t border-border-green dark:border-white/5 py-16">
-        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-12">
-          <div className="flex flex-col gap-4">
+      <footer className="bg-white dark:bg-background-dark border-t border-border-green dark:border-white/5 py-12">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+          <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 bg-primary rounded flex items-center justify-center text-background-dark">
                 <span className="material-symbols-outlined text-xs font-bold">eco</span>
               </div>
               <h2 className="text-lg font-extrabold dark:text-white">EventLeaf</h2>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed max-w-md">
               Making world-class event management sustainable, accessible, and digital-first.
             </p>
           </div>
-          <div>
-            <h4 className="font-bold mb-4 dark:text-white">Product</h4>
-            <ul className="text-sm text-gray-500 dark:text-gray-400 space-y-2">
-              <li><a className="hover:text-primary transition-colors" href="#digital-tickets">Digital Tickets</a></li>
-              <li><a className="hover:text-primary transition-colors" href="#eco-audit">Eco-Audit</a></li>
-              <li><a className="hover:text-primary transition-colors" href="#pricing">Pricing</a></li>
-              <li><a className="hover:text-primary transition-colors" href="#api">API Docs</a></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-bold mb-4 dark:text-white">Company</h4>
-            <ul className="text-sm text-gray-500 dark:text-gray-400 space-y-2">
-              <li><a className="hover:text-primary transition-colors" href="#about">About Us</a></li>
-              <li><a className="hover:text-primary transition-colors" href="#sustainability">Sustainability</a></li>
-              <li><a className="hover:text-primary transition-colors" href="#careers">Careers</a></li>
-              <li><a className="hover:text-primary transition-colors" href="#contact">Contact</a></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-bold mb-4 dark:text-white">Stay Green</h4>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Join our newsletter for eco-event tips.</p>
-            <div className="flex gap-2">
-              <input
-                className="bg-background-light dark:bg-white/5 border border-border-green dark:border-white/10 rounded-lg text-sm flex-1 focus:ring-primary focus:border-primary px-3 py-2"
-                placeholder="Email"
-                type="email"
-              />
-              <button type="button" className="p-2 bg-primary rounded-lg text-background-dark">
-                <span className="material-symbols-outlined text-sm font-bold">send</span>
-              </button>
-            </div>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto px-6 mt-16 pt-8 border-t border-border-green dark:border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-gray-400">© 2024 EventLeaf Inc. Built for the Planet.</p>
           <div className="flex gap-6">
-            <a className="text-gray-400 hover:text-primary" href="#"><span className="material-symbols-outlined text-xl">language</span></a>
-            <a className="text-gray-400 hover:text-primary" href="#"><span className="material-symbols-outlined text-xl">diversity_1</span></a>
-            <a className="text-gray-400 hover:text-primary" href="#"><span className="material-symbols-outlined text-xl">public</span></a>
+            <a className="text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-primary transition-colors" href="#about">
+              About us
+            </a>
+            <a className="text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-primary transition-colors" href="#contact">
+              Contact us
+            </a>
           </div>
         </div>
       </footer>

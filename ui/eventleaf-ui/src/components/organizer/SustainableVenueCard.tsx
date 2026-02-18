@@ -1,3 +1,5 @@
+import { EcoCertifiedBadge } from "./EcoCertifiedBadge";
+
 /** Scalable venue card: Eco-Certified badge, capacity, sustainability index, feature tags, Select Venue */
 export type SustainableVenue = {
   id: string;
@@ -29,12 +31,7 @@ export function SustainableVenueCard({ venue, onSelect }: SustainableVenueCardPr
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
         <div className="absolute top-4 left-4 flex gap-2">
-          {venue.isEcoCertified && (
-            <span className="bg-primary/90 backdrop-blur-sm text-text-leaf text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full flex items-center gap-1 shadow-sm">
-              <span className="material-symbols-outlined text-sm fill">eco</span>
-              Eco-Certified
-            </span>
-          )}
+          {venue.isEcoCertified && <EcoCertifiedBadge variant="card" />}
         </div>
         <div className="absolute bottom-4 right-4">
           <span className="bg-black/60 backdrop-blur-md text-white text-xs font-bold px-3 py-1 rounded-lg flex items-center gap-1">
