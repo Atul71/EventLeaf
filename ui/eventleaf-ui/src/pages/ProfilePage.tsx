@@ -21,15 +21,13 @@ export function ProfilePage() {
 
   // Mock link handlers – replace with real navigation or API calls later
   const mockLinks = {
-    createEvent: "#/create-event",
+    createEvent: "/organizer/events",
     editProfile: "#/profile/edit",
     shareImpact: "#/profile/share-impact",
     discover: "#/discover",
-    events: "#/events",
     impact: "#/impact",
     filter: "#/profile/filter",
     viewPastTickets: "#/profile/past-tickets",
-    fullReport: "#/sustainability-report",
     downloadWallet: "#/download-wallet",
   };
 
@@ -37,14 +35,11 @@ export function ProfilePage() {
     <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-background-light dark:bg-background-dark text-text-leaf font-display">
       <header className="sticky top-0 z-50 w-full border-b border-border-leaf bg-white/80 dark:bg-background-dark/80 backdrop-blur-md px-6 md:px-20 py-3">
         <div className="mx-auto flex max-w-[1280px] items-center justify-between">
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4 md:gap-8">
             <Logo />
             <nav className="hidden md:flex items-center gap-6">
               <Link to={mockLinks.discover} className="text-sm font-semibold hover:text-primary transition-colors">
                 Discover
-              </Link>
-              <Link to={mockLinks.events} className="text-sm font-semibold hover:text-primary transition-colors">
-                Events
               </Link>
               <Link to={mockLinks.impact} className="text-sm font-semibold hover:text-primary transition-colors">
                 Impact
@@ -52,6 +47,13 @@ export function ProfilePage() {
             </nav>
           </div>
           <div className="flex flex-1 justify-end gap-4 items-center">
+            <Link
+              to="/organizer"
+              className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-lg bg-soft-green dark:bg-white/10 font-bold text-sm text-text-leaf dark:text-white border border-border-leaf dark:border-white/10 hover:bg-primary hover:text-background-dark hover:border-primary transition-all"
+            >
+              <span className="material-symbols-outlined text-xl">dashboard</span>
+              Organizer Dashboard
+            </Link>
             <Link
               to={mockLinks.createEvent}
               className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-lg bg-primary font-bold text-sm text-text-leaf shadow-sm hover:brightness-105 transition-all"
@@ -97,14 +99,14 @@ export function ProfilePage() {
                   className="size-24 md:size-32 rounded-full border-4 border-primary/20 bg-cover bg-center shadow-lg"
                   style={{ backgroundImage: `url('${PROFILE_IMAGE}')` }}
                   role="img"
-                  aria-label="Alex Greenwood"
+                  aria-label="Vivek Chengannassery"
                 />
                 <div className="absolute bottom-1 right-1 size-8 rounded-full bg-primary flex items-center justify-center border-2 border-white">
                   <span className="material-symbols-outlined text-white text-sm fill">verified</span>
                 </div>
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold">Alex Greenwood</h1>
+                <h1 className="text-2xl md:text-3xl font-bold">Vivek Chengannassery</h1>
                 <p className="text-subtext-leaf font-medium flex items-center gap-1">
                   <span className="material-symbols-outlined text-sm">location_on</span>
                   Portland, Oregon
@@ -389,34 +391,6 @@ export function ProfilePage() {
                 </p>
               </div>
             </div>
-
-            <div className="bg-background-dark text-white rounded-2xl p-6 shadow-xl relative overflow-hidden">
-              <div className="absolute -top-4 -right-4 size-24 bg-primary/20 rounded-full blur-2xl" />
-              <h3 className="font-bold text-lg mb-4 flex items-center gap-2 relative">
-                <span className="material-symbols-outlined text-primary">cloud</span>
-                Footprint Detail
-              </h3>
-              <div className="space-y-3 relative">
-                <div className="flex justify-between text-sm">
-                  <span className="opacity-70">Travel Impact</span>
-                  <span className="font-bold">Low (12kg)</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="opacity-70">Event Dining</span>
-                  <span className="font-bold">Vegan Opted</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="opacity-70">Merch Impact</span>
-                  <span className="font-bold">Digital Only</span>
-                </div>
-              </div>
-              <Link
-                to={mockLinks.fullReport}
-                className="w-full mt-6 py-2.5 rounded-lg bg-primary text-text-leaf font-bold text-sm shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform block text-center"
-              >
-                Full Sustainability Report
-              </Link>
-            </div>
           </div>
         </div>
       </main>
@@ -450,7 +424,7 @@ export function ProfilePage() {
             <div className="text-left space-y-2 mb-6">
               <div className="flex justify-between text-sm">
                 <span className="opacity-60">Attendee</span>
-                <span className="font-bold">Alex Greenwood</span>
+                <span className="font-bold">Vivek Chengannassery</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="opacity-60">Ticket ID</span>
