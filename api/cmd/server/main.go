@@ -45,6 +45,7 @@ func main() {
 	venueRepo := repository.NewVenueRepository(database)
 	ecoAttrRepo := repository.NewEcoAttributeRepository(database)
 	eventHandler := handler.NewEventHandler(eventRepo, venueRepo, ecoAttrRepo)
+	venueHandler := handler.NewVenueHandler(venueRepo)
 
 	router := gin.Default()
 	router.GET("/health", func(c *gin.Context) {
@@ -58,6 +59,13 @@ func main() {
 	{
 		v1.POST("/events", eventHandler.CreateEvent)
 		v1.GET("/eco-attributes", eventHandler.ListEcoAttributes)
+
+		// Venue CRUD endpoints
+		v1.POST("/venues", venueHandler.CreateVenue)
+		v1.GET("/venues", venueHandler.ListVenues)
+		v1.GET("/venues/:id", venueHandler.GetVenue)
+		v1.PUT("/venues/:id", venueHandler.UpdateVenue)
+		v1.DELETE("/venues/:id", venueHandler.DeleteVenue)
 	}
 
 	srv := &http.Server{
