@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 type EcoCertifiedBadgeProps = {
-  variant?: "default" | "compact" | "inline";
+  variant?: "default" | "compact" | "inline" | "card";
   children?: ReactNode;
   className?: string;
 };
@@ -14,6 +14,18 @@ export function EcoCertifiedBadge({
 }: EcoCertifiedBadgeProps) {
   const base =
     "inline-flex items-center gap-1.5 font-semibold text-primary uppercase tracking-wider";
+
+  if (variant === "card") {
+    return (
+      <span
+        className={`bg-primary/90 backdrop-blur-sm text-text-leaf text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full flex items-center gap-1 shadow-sm ${className}`}
+        aria-label="Eco-Certified"
+      >
+        <span className="material-symbols-outlined text-sm fill">eco</span>
+        {children}
+      </span>
+    );
+  }
 
   if (variant === "compact") {
     return (
