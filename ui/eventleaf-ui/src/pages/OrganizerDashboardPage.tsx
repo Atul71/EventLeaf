@@ -1,8 +1,6 @@
-import { Link, useLocation } from "react-router-dom";
-import { Logo } from "../components/Logo";
+import { Link } from "react-router-dom";
+import { OrganizerSidebar } from "../components/organizer/OrganizerSidebar";
 
-const ORGANIZER_AVATAR =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuAMIwarmNgeQexN0-DdcY0-iNGx-hDEy8iyRBWb1GhVfDf2SMZ58EMvs_I5R6UC507BXKup7WyE0YXrsqpjM5BQFIhOprrhg1MRQubtjMgYCIl5sfRYoaZMuAlA6R02ciz7V-4z-12CXY9I9VPRMMlGSb0aPoyc7jgEZSXZXkhuNj21u-RuBp_siMbNqoeH_2KglWCA54eA7e8QuUzDHd6xbsM4cYHv4PJ8xuP0g76NBJgBQmyWNgYS0gx-wWWxhASaBq500bVMuz0";
 const EVENT_IMG_1 =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuDTTO7SGQsfjzjFSjGtNfMDVM50HT6iuUwgPG2BrviA582MRrWlJjjpi9i8j1ZdXDNzWlwvVqNp0ylZ4j5tGbh-TIasvlQmREKzcm0YQKUFcb8nH1aZGekirij50Sdf9YyKBbzkIC1Y1hVM0psT43TBaAqvBKyj6dIE-jnZUz1py3f4L5NcRLAF2wsCIWVcZBzNmaRcCf9auacWqKaseQQH6FpPPgmSwo0CMJ1AaAMI9HzDvhQndGUyAss81QONqQeOE_YKKbJ51yY";
 const EVENT_IMG_2 =
@@ -17,69 +15,10 @@ const AVATARS = [
   "https://lh3.googleusercontent.com/aida-public/AB6AXuBYg-8_IEjrNbxqO0nh3el-FtDLmPO_dATVPzchn_TKVHZPBalI77FxuY0s93EsQXI6JEslL7KfcIofw3UNsqgSeAb-r2NJSxqxpQIQmxBbjb95MqvNRF5uSylKNzRp6GPnpFaNhhkdr8NJO9ufRLAMl47LLyQ9AEuk2H4pN_nKqPXrYpsyHAYGbSC_qHTLHGsq2fThtuaqiLVeTyPgyN1DNFrCTnNCmzXCsBNCrQ4RZCQfO16qJfr5w-fpGUjotVU27sTwQF79JJQ",
 ];
 
-const navItems = [
-  { path: "/organizer", icon: "dashboard", label: "Overview" },
-  { path: "/organizer/events", icon: "event", label: "My Events" },
-  { path: "/organizer/venues", icon: "location_on", label: "Browse Sustainable Venues" },
-  { path: "/organizer/vendors", icon: "storefront", label: "Eco-Vendors" },
-  { path: "/organizer/impact", icon: "analytics", label: "Impact Reports" },
-];
-
 export function OrganizerDashboardPage() {
-  const location = useLocation();
-
   return (
     <div className="flex min-h-screen bg-background-light dark:bg-background-dark text-text-leaf">
-      {/* Sidebar */}
-      <aside className="w-72 border-r border-border-green bg-white dark:bg-[#152a17] hidden lg:flex flex-col sticky top-0 h-screen">
-        <div className="p-6 flex items-center gap-3">
-          <Logo />
-        </div>
-        <nav className="flex-1 px-4 py-4 space-y-1">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                  isActive
-                    ? "bg-primary/10 text-text-leaf font-semibold border-l-4 border-primary"
-                    : "text-subtext-leaf hover:bg-background-light dark:hover:bg-white/5"
-                }`}
-              >
-                <span className={`material-symbols-outlined ${isActive ? "fill" : ""}`}>
-                  {item.icon}
-                </span>
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="p-4 border-t border-border-green">
-          <Link
-            to="/organizer/settings"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-subtext-leaf hover:bg-background-light dark:hover:bg-white/5 transition-colors"
-          >
-            <span className="material-symbols-outlined">settings</span>
-            <span>Account Settings</span>
-          </Link>
-          <div className="mt-4 p-4 bg-background-light dark:bg-white/5 rounded-xl flex items-center gap-3">
-            <div
-              className="size-10 rounded-full bg-cover bg-center flex-shrink-0"
-              style={{ backgroundImage: `url('${ORGANIZER_AVATAR}')` }}
-              role="img"
-              aria-label="Organizer profile"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold truncate text-text-leaf dark:text-white">
-                Green Horizon Co.
-              </p>
-              <p className="text-xs text-subtext-leaf truncate">Pro Plan</p>
-            </div>
-          </div>
-        </div>
-      </aside>
+      <OrganizerSidebar />
 
       {/* Main content */}
       <main
@@ -124,11 +63,18 @@ export function OrganizerDashboardPage() {
               <span>Browse Sustainable Venues</span>
             </Link>
             <Link
-              to="/organizer/events/create"
+              to="/organizer/events"
               className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-background-dark font-bold px-5 py-2.5 rounded-lg transition-all shadow-sm"
             >
               <span className="material-symbols-outlined text-xl">add_circle</span>
               <span>Create Event</span>
+            </Link>
+            <Link
+              to="/profile"
+              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-subtext-leaf hover:text-primary transition-colors"
+            >
+              <span className="material-symbols-outlined">person</span>
+              Profile
             </Link>
             <button
               type="button"
@@ -184,9 +130,9 @@ export function OrganizerDashboardPage() {
                 icon: "groups",
               },
               {
-                label: "CO2 Saved (kg)",
-                value: "12,450",
-                sub: "+15% impact",
+                label: "Eco-Events Hosted",
+                value: "98",
+                sub: "+15% from last year",
                 icon: "eco",
               },
             ].map((m) => (
@@ -205,71 +151,6 @@ export function OrganizerDashboardPage() {
                 </p>
               </div>
             ))}
-          </div>
-
-          {/* Carbon chart */}
-          <div className="bg-white dark:bg-[#152a17] p-8 rounded-xl border border-border-green shadow-sm">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h2 className="text-xl font-bold text-text-leaf dark:text-white">
-                  Carbon Footprint Reduction
-                </h2>
-                <p className="text-sm text-subtext-leaf">
-                  Efficiency tracking across all managed events
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="px-3 py-1 text-xs font-bold bg-background-light dark:bg-white/10 rounded-md text-text-leaf dark:text-white"
-                >
-                  6 Months
-                </button>
-                <button
-                  type="button"
-                  className="px-3 py-1 text-xs font-bold hover:bg-background-light dark:hover:bg-white/10 rounded-md transition-colors text-subtext-leaf"
-                >
-                  1 Year
-                </button>
-              </div>
-            </div>
-            <div className="w-full h-64 relative">
-              <svg
-                className="w-full h-full"
-                preserveAspectRatio="none"
-                viewBox="0 0 1000 300"
-                aria-hidden
-              >
-                <defs>
-                  <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="#2bee3b" stopOpacity={0.2} />
-                    <stop offset="100%" stopColor="#2bee3b" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <line stroke="#cfe7d1" strokeDasharray="4" x1="0" x2="1000" y1="50" y2="50" />
-                <line stroke="#cfe7d1" strokeDasharray="4" x1="0" x2="1000" y1="150" y2="150" />
-                <line stroke="#cfe7d1" strokeDasharray="4" x1="0" x2="1000" y1="250" y2="250" />
-                <path
-                  d="M0,220 C100,200 200,250 300,180 C400,110 500,130 600,90 C700,50 800,100 900,40 L1000,20 L1000,300 L0,300 Z"
-                  fill="url(#chartGradient)"
-                />
-                <path
-                  d="M0,220 C100,200 200,250 300,180 C400,110 500,130 600,90 C700,50 800,100 900,40 L1000,20"
-                  fill="none"
-                  stroke="#2bee3b"
-                  strokeLinecap="round"
-                  strokeWidth={4}
-                />
-              </svg>
-              <div className="flex justify-between mt-4 text-xs font-bold text-subtext-leaf">
-                <span>JAN</span>
-                <span>FEB</span>
-                <span>MAR</span>
-                <span>APR</span>
-                <span>MAY</span>
-                <span>JUN</span>
-              </div>
-            </div>
           </div>
 
           {/* Event management */}
@@ -420,7 +301,7 @@ export function OrganizerDashboardPage() {
 
               {/* Add event card */}
               <Link
-                to="/organizer/events/create"
+                to="/organizer/events"
                 className="border-2 border-dashed border-border-green rounded-xl flex flex-col items-center justify-center p-8 text-subtext-leaf hover:bg-white dark:hover:bg-white/5 hover:border-primary transition-all group min-h-[280px]"
               >
                 <span className="material-symbols-outlined text-4xl mb-2 group-hover:text-primary">
@@ -432,102 +313,59 @@ export function OrganizerDashboardPage() {
             </div>
           </div>
 
-          {/* Venues & Vendors */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-white dark:bg-[#152a17] p-6 rounded-xl border border-border-green shadow-sm">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-bold text-text-leaf dark:text-white flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">location_on</span>
-                  Recommended Venues
-                </h3>
-                <Link
-                  to="/organizer/venues"
-                  className="text-xs font-bold text-primary hover:underline"
-                >
-                  Browse Sustainable Venues →
-                </Link>
-              </div>
-              <div className="space-y-4">
-                <Link
-                  to="/organizer/venues"
-                  className="flex items-center gap-4 p-3 hover:bg-background-light dark:hover:bg-white/5 rounded-lg transition-colors"
-                >
-                  <div
-                    className="size-12 rounded-lg bg-cover bg-center flex-shrink-0"
-                    style={{ backgroundImage: `url('${VENUE_IMG_1}')` }}
-                    role="img"
-                    aria-label="The Greenhouse Collective"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-text-leaf dark:text-white">
-                      The Greenhouse Collective
-                    </p>
-                    <p className="text-xs text-subtext-leaf">LEED Platinum • Portland, OR</p>
-                  </div>
-                  <span className="material-symbols-outlined text-subtext-leaf">chevron_right</span>
-                </Link>
-                <Link
-                  to="/organizer/venues"
-                  className="flex items-center gap-4 p-3 hover:bg-background-light dark:hover:bg-white/5 rounded-lg transition-colors"
-                >
-                  <div
-                    className="size-12 rounded-lg bg-cover bg-center flex-shrink-0"
-                    style={{ backgroundImage: `url('${VENUE_IMG_2}')` }}
-                    role="img"
-                    aria-label="Austin Solar Pavilion"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-text-leaf dark:text-white">
-                      Austin Solar Pavilion
-                    </p>
-                    <p className="text-xs text-subtext-leaf">
-                      100% Renewable Energy • Austin, TX
-                    </p>
-                  </div>
-                  <span className="material-symbols-outlined text-subtext-leaf">chevron_right</span>
-                </Link>
-              </div>
+          {/* Recommended Venues */}
+          <div className="bg-white dark:bg-[#152a17] p-6 rounded-xl border border-border-green shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-bold text-text-leaf dark:text-white flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">location_on</span>
+                Recommended Venues
+              </h3>
+              <Link
+                to="/organizer/venues"
+                className="text-xs font-bold text-primary hover:underline"
+              >
+                Browse Sustainable Venues →
+              </Link>
             </div>
-
-            <div className="bg-white dark:bg-[#152a17] p-6 rounded-xl border border-border-green shadow-sm">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-bold text-text-leaf dark:text-white flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">storefront</span>
-                  Top Eco-Vendors
-                </h3>
-                <button
-                  type="button"
-                  className="text-xs font-bold text-subtext-leaf hover:underline"
-                >
-                  Browse All
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center gap-4 p-3 hover:bg-background-light dark:hover:bg-white/5 rounded-lg transition-colors cursor-pointer">
-                  <div className="size-12 rounded-lg bg-primary/20 flex items-center justify-center text-primary flex-shrink-0">
-                    <span className="material-symbols-outlined">restaurant</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-text-leaf dark:text-white">
-                      Root & Stem Catering
-                    </p>
-                    <p className="text-xs text-subtext-leaf">Zero-Waste Kitchen • 4.9 ★</p>
-                  </div>
-                  <span className="material-symbols-outlined text-subtext-leaf">chevron_right</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Link
+                to="/organizer/venues"
+                className="flex items-center gap-4 p-3 hover:bg-background-light dark:hover:bg-white/5 rounded-lg transition-colors"
+              >
+                <div
+                  className="size-12 rounded-lg bg-cover bg-center flex-shrink-0"
+                  style={{ backgroundImage: `url('${VENUE_IMG_1}')` }}
+                  role="img"
+                  aria-label="The Greenhouse Collective"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-text-leaf dark:text-white">
+                    The Greenhouse Collective
+                  </p>
+                  <p className="text-xs text-subtext-leaf">LEED Platinum • Portland, OR</p>
                 </div>
-                <div className="flex items-center gap-4 p-3 hover:bg-background-light dark:hover:bg-white/5 rounded-lg transition-colors cursor-pointer">
-                  <div className="size-12 rounded-lg bg-primary/20 flex items-center justify-center text-primary flex-shrink-0">
-                    <span className="material-symbols-outlined">print</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-text-leaf dark:text-white">
-                      GreenPrint Solutions
-                    </p>
-                    <p className="text-xs text-subtext-leaf">Recycled Signage • 5.0 ★</p>
-                  </div>
-                  <span className="material-symbols-outlined text-subtext-leaf">chevron_right</span>
+                <span className="material-symbols-outlined text-subtext-leaf">chevron_right</span>
+              </Link>
+              <Link
+                to="/organizer/venues"
+                className="flex items-center gap-4 p-3 hover:bg-background-light dark:hover:bg-white/5 rounded-lg transition-colors"
+              >
+                <div
+                  className="size-12 rounded-lg bg-cover bg-center flex-shrink-0"
+                  style={{ backgroundImage: `url('${VENUE_IMG_2}')` }}
+                  role="img"
+                  aria-label="Austin Solar Pavilion"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-text-leaf dark:text-white">
+                    Austin Solar Pavilion
+                  </p>
+                  <p className="text-xs text-subtext-leaf">
+                    100% Renewable Energy • Austin, TX
+                  </p>
                 </div>
-              </div>
+                <span className="material-symbols-outlined text-subtext-leaf">chevron_right</span>
+              </Link>
             </div>
           </div>
         </div>

@@ -19,8 +19,6 @@ function App() {
         <Route path="/organizer/venues" element={<VenueBrowserPage />} />
         <Route path="/organizer/events" element={<OrganizerPlaceholderPage />} />
         <Route path="/organizer/events/create" element={<OrganizerPlaceholderPage />} />
-        <Route path="/organizer/vendors" element={<OrganizerPlaceholderPage />} />
-        <Route path="/organizer/impact" element={<OrganizerPlaceholderPage />} />
         <Route path="/organizer/settings" element={<OrganizerPlaceholderPage />} />
       </Routes>
     </BrowserRouter>

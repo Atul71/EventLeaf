@@ -153,13 +153,21 @@ export function VenueBrowserPage() {
     <div className="min-h-screen bg-background-light dark:bg-background-dark text-text-leaf">
       {/* Top Navigation Bar */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-soft-green dark:border-[#1a3a1d] px-6 lg:px-12 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link to="/" className="flex items-center gap-2 text-text-leaf dark:text-white">
-              <span className="material-symbols-outlined text-primary text-3xl">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4 md:gap-8 min-w-0">
+            <Link
+              to="/organizer"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-bold text-subtext-leaf hover:text-primary hover:bg-soft-green dark:hover:bg-white/5 transition-colors shrink-0"
+              aria-label="Back to Organizer Dashboard"
+            >
+              <span className="material-symbols-outlined text-xl">arrow_back</span>
+              <span className="hidden sm:inline">Back</span>
+            </Link>
+            <Link to="/" className="flex items-center gap-2 text-text-leaf dark:text-white shrink-0">
+              <span className="material-symbols-outlined text-primary text-2xl sm:text-3xl">
                 energy_savings_leaf
               </span>
-              <h1 className="text-xl font-extrabold tracking-tight">EventLeaf</h1>
+              <h1 className="text-lg sm:text-xl font-extrabold tracking-tight truncate">EventLeaf</h1>
             </Link>
             <nav className="hidden md:flex items-center gap-6">
               <Link
@@ -174,29 +182,27 @@ export function VenueBrowserPage() {
               >
                 Events
               </Link>
-              <Link
-                to="/organizer/impact"
-                className="text-sm font-semibold text-subtext-leaf hover:text-primary transition-colors"
-              >
-                Impact Reports
-              </Link>
             </nav>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <Link
               to="/organizer"
-              className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-bold border border-soft-green dark:border-[#2a4a2d] rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-all text-text-leaf dark:text-white"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-bold border border-soft-green dark:border-[#2a4a2d] rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-all text-text-leaf dark:text-white"
             >
               <span className="material-symbols-outlined text-lg">dashboard</span>
-              Organizer Dashboard
+              <span className="hidden sm:inline">Organizer Dashboard</span>
             </Link>
-            <div className="h-10 w-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+            <Link
+              to="/profile"
+              className="h-10 w-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center overflow-hidden flex-shrink-0 ring-2 ring-transparent hover:ring-primary/30 transition-all"
+              aria-label="View profile"
+            >
               <img
                 src={USER_AVATAR}
                 alt="User profile"
                 className="w-full h-full object-cover"
               />
-            </div>
+            </Link>
           </div>
         </div>
       </header>
@@ -204,22 +210,13 @@ export function VenueBrowserPage() {
       <main className="max-w-7xl mx-auto px-6 lg:px-12 py-8">
         {/* Hero Search Section */}
         <section className="mb-12">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-            <div className="max-w-2xl">
-              <h2 className="text-4xl font-black text-text-leaf dark:text-white mb-2 leading-tight">
-                Sustainable Venue Browser
-              </h2>
-              <p className="text-subtext-leaf text-lg">
-                Curated eco-certified spaces for carbon-neutral events.
-              </p>
-            </div>
-            <button
-              type="button"
-              className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-[#1a3a1d] border border-soft-green dark:border-[#2a4a2d] rounded-xl shadow-sm hover:shadow-md transition-all font-bold text-text-leaf dark:text-white"
-            >
-              <span className="material-symbols-outlined">map</span>
-              View Map
-            </button>
+          <div className="mb-8">
+            <h2 className="text-4xl font-black text-text-leaf dark:text-white mb-2 leading-tight">
+              Sustainable Venue Browser
+            </h2>
+            <p className="text-subtext-leaf text-lg">
+              Curated eco-certified spaces for carbon-neutral events.
+            </p>
           </div>
 
           {/* Search and Advanced Filters */}
@@ -276,7 +273,7 @@ export function VenueBrowserPage() {
               key={venue.id}
               venue={venue}
               onSelect={(v) => {
-                navigate("/organizer/events/create", {
+                navigate("/organizer/events", {
                   state: { selectedVenue: { id: v.id, name: v.name, location: v.location } },
                 });
               }}
