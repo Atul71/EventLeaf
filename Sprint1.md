@@ -56,3 +56,7 @@ NA
 Backend - https://youtu.be/4muhEnVfLFo  
 
 Frontend - https://youtube.com/watch?v=akI8WWK7Sso&feature=youtu.be
+
+
+Link to the board
+https://github.com/users/Atul71/projects/5
