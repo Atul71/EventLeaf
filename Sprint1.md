@@ -15,12 +15,12 @@ Pritika Kannapiran
 
 ## Backend (API)
 Vivek Chenganassery  
-<BR> CRUD for Green Venues with Certifications - 5 story points
+CRUD for Green Venues with Certifications - 5 story points
 <BR>Event Creation with Eco-Validation Logic - 3 story points 
 <BR>Backend cleanup - 1 story point 
 
 Pritika Kannapiran  
-<BR> Design and Implement Database Schema - 5 story points
+Design and Implement Database Schema - 5 story points
 
 
 
@@ -30,7 +30,7 @@ Atul Arun
 <BR>Frontend cleanup - 1 story point 
 
 Shane George Thomas  
-<BR> Profile Page - 3 story points 
+Profile Page - 3 story points 
 <BR>Auth - JWT Login/Signup & React Boilerplate - 2 story points 
 
 
