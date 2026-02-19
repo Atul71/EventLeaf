@@ -31,17 +31,9 @@ export function OrganizerDashboardPage() {
         {/* Top bar */}
         <header className="sticky top-0 z-30 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-green px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <div className="flex flex-col">
-              <h1 className="text-lg font-bold leading-none text-text-leaf dark:text-white">
-                Green Horizon Events
-              </h1>
-              <div className="flex items-center gap-1 mt-1">
-                <span className="material-symbols-outlined text-xs text-primary fill">verified</span>
-                <span className="text-xs font-semibold text-primary uppercase tracking-wider">
-                  Verified Sustainable
-                </span>
-              </div>
-            </div>
+            <h1 className="text-lg font-bold leading-none text-text-leaf dark:text-white">
+              Green Horizon Events
+            </h1>
           </div>
           <div className="flex items-center gap-4">
             <div className="relative hidden md:block">
@@ -117,24 +109,9 @@ export function OrganizerDashboardPage() {
           {/* Impact metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              {
-                label: "Total Events Hosted",
-                value: "128",
-                sub: "+12% from last year",
-                icon: "calendar_today",
-              },
-              {
-                label: "Attendees Reached",
-                value: "45,200",
-                sub: "+8% increase",
-                icon: "groups",
-              },
-              {
-                label: "Eco-Events Hosted",
-                value: "98",
-                sub: "+15% from last year",
-                icon: "eco",
-              },
+              { label: "Total Events Hosted", value: "128", icon: "calendar_today" },
+              { label: "Attendees Reached", value: "45,200", icon: "groups" },
+              { label: "Eco-Events Hosted", value: "98", icon: "eco" },
             ].map((m) => (
               <div
                 key={m.icon}
@@ -145,10 +122,6 @@ export function OrganizerDashboardPage() {
                 </div>
                 <p className="text-sm font-medium text-subtext-leaf">{m.label}</p>
                 <h3 className="text-3xl font-black text-text-leaf dark:text-white">{m.value}</h3>
-                <p className="text-xs font-bold text-primary mt-2 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">trending_up</span>
-                  {m.sub}
-                </p>
               </div>
             ))}
           </div>
@@ -374,17 +347,6 @@ export function OrganizerDashboardPage() {
           <p className="text-sm text-subtext-leaf">
             © {new Date().getFullYear()} EventLeaf Eco-Management. All rights reserved.
           </p>
-          <div className="mt-2 flex justify-center gap-4 text-xs font-bold text-subtext-leaf flex-wrap">
-            <a className="hover:text-primary" href="#privacy">
-              Privacy Policy
-            </a>
-            <a className="hover:text-primary" href="#terms">
-              Terms of Service
-            </a>
-            <a className="hover:text-primary" href="#sustainability">
-              Sustainability Commitment
-            </a>
-          </div>
         </footer>
       </main>
     </div>
