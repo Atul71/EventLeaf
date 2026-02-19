@@ -61,7 +61,6 @@ export function OrganizerSidebar() {
             <p className="text-sm font-bold truncate text-text-leaf dark:text-white">
               Green Horizon Co.
             </p>
-            <p className="text-xs text-subtext-leaf truncate">Pro Plan · Click to view profile</p>
           </div>
         </Link>
       </div>

@@ -29,11 +29,6 @@ export function LoginPage() {
               </h1>
               <p className="text-primary text-xl font-medium">— Robert Swan</p>
             </div>
-            <div className="flex gap-8 text-white/60 text-sm">
-              <span>© 2024 EventLeaf Platform</span>
-              <a href="#privacy" className="hover:text-white/80">Privacy Policy</a>
-              <a href="#impact" className="hover:text-white/80">Environmental Impact Report</a>
-            </div>
           </div>
         </div>
 
