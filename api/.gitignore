@@ -2,6 +2,10 @@
 # Node.js / JavaScript / TypeScript / React / Vite
 # ────────────────────────────────────────────────
 
+# env files
+.env
+.env.example
+
 # Dependencies
 node_modules/
 npm-debug.log*
