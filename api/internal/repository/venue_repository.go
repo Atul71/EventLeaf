@@ -18,6 +18,16 @@ func NewVenueRepository(db *db.DB) *VenueRepository {
 	return &VenueRepository{db: db}
 }
 
+func (r *VenueRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Venue, error) {
+	var venue models.Venue
+	err := r.db.Pool.QueryRow(ctx,
+		`SELECT id, is_eco_certified FROM venues WHERE id = $1`,
+		id,
+	).Scan(&venue.ID, &venue.IsEcoCertified)
+	if err != nil {
+		return nil, err
+	}
+	return &venue, nil
 const venueFields = `id, name, description, address, city, state, zip_code, country,
 	latitude, longitude, capacity, contact_email, contact_phone, website_url,
 	is_eco_certified, eco_certifications, has_public_transit, has_parking,
