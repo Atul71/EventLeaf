@@ -62,6 +62,13 @@ export function OrganizerDashboardPage() {
               <span>Create Event</span>
             </Link>
             <Link
+              to="/events/eco-innovate-summit"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border-green dark:border-white/10 text-subtext-leaf hover:text-primary hover:border-primary transition-colors text-sm font-bold"
+            >
+              <span className="material-symbols-outlined text-xl">campaign</span>
+              Event Landing
+            </Link>
+            <Link
               to="/profile"
               className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-subtext-leaf hover:text-primary transition-colors"
             >

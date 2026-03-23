@@ -61,6 +61,13 @@ export function ProfilePage() {
               <span className="material-symbols-outlined text-xl">add</span>
               Create Event
             </Link>
+            <Link
+              to="/events/eco-innovate-summit"
+              className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-lg border border-border-leaf dark:border-white/10 text-subtext-leaf font-bold text-sm hover:text-primary hover:border-primary transition-colors"
+            >
+              <span className="material-symbols-outlined text-xl">campaign</span>
+              Event Landing
+            </Link>
             <div className="hidden sm:flex max-w-xs w-full lg:max-w-[200px]">
               <div className="relative w-full">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtext-leaf text-xl">
