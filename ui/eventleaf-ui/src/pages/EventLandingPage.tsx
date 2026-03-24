@@ -1,42 +1,73 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { Logo } from "../components/Logo";
 import { EcoCertifiedBadge } from "../components/organizer/EcoCertifiedBadge";
-
-const EVENT_IMAGE =
-  "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1400&q=80";
-const VENUE_IMAGE =
-  "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1200&q=80";
-
-const ECO_PROOFS = [
-  { icon: "verified", title: "LEED Platinum Venue", detail: "Certified by U.S. Green Building Council" },
-  { icon: "bolt", title: "100% Renewable Energy", detail: "Solar + wind-powered operations for event hours" },
-  { icon: "recycling", title: "Zero-Waste Plan", detail: "92% diversion from landfill through reuse and composting" },
-  { icon: "water_drop", title: "Water Conservation", detail: "Rainwater harvesting + low-flow infrastructure" },
-] as const;
-
-const VENUE_CERTIFICATIONS = [
-  "LEED Platinum",
-  "TRUE Zero Waste",
-  "ISO 14001",
-  "Green Key Global",
-] as const;
-
-const AGENDA_ITEMS = [
-  { time: "09:00", title: "Registration & Green Welcome Kit" },
-  { time: "10:00", title: "Opening Keynote: Climate-Positive Events" },
-  { time: "12:30", title: "Plant-Based Networking Lunch" },
-  { time: "15:00", title: "Venue Sustainability Walkthrough" },
-] as const;
+import { getEventBySlug } from "../data/events";
 
 export function EventLandingPage() {
+  const { slug } = useParams<{ slug: string }>();
+  const event = getEventBySlug(slug);
+  const [shareState, setShareState] = useState<"idle" | "copied" | "error">("idle");
+
+  if (!event) {
+    return (
+      <div className="min-h-screen bg-background-light dark:bg-background-dark text-text-leaf">
+        <header className="sticky top-0 z-40 border-b border-border-green bg-white/80 dark:bg-background-dark/80 backdrop-blur-md">
+          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+            <Logo />
+            <Link
+              to="/events"
+              className="rounded-lg border border-border-green px-4 py-2 text-sm font-bold hover:bg-soft-green transition-colors"
+            >
+              Back to Discover Events
+            </Link>
+          </div>
+        </header>
+        <main className="mx-auto max-w-3xl px-6 py-20 text-center">
+          <h1 className="text-3xl font-black dark:text-white">Event not found</h1>
+          <p className="mt-3 text-subtext-leaf">The event link looks incorrect or no longer exists.</p>
+        </main>
+      </div>
+    );
+  }
+
+  const scorePercent = Math.round((event.sustainabilityScore / 5) * 100);
+  const eventUrl = `${window.location.origin}/events/${event.slug}`;
+
+  async function handleShare() {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: event.name,
+          text: `Check out this eco-certified event: ${event.name}`,
+          url: eventUrl,
+        });
+        setShareState("copied");
+      } else {
+        await navigator.clipboard.writeText(eventUrl);
+        setShareState("copied");
+      }
+    } catch {
+      // Fallback path when Web Share is unavailable/blocked.
+      try {
+        await navigator.clipboard.writeText(eventUrl);
+        setShareState("copied");
+      } catch {
+        setShareState("error");
+      }
+    }
+
+    setTimeout(() => setShareState("idle"), 2000);
+  }
+
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark text-text-leaf">
       <header className="sticky top-0 z-40 border-b border-border-green bg-white/80 dark:bg-background-dark/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <Logo />
           <nav className="flex items-center gap-4">
-            <Link to="/" className="text-sm font-semibold text-subtext-leaf hover:text-primary transition-colors">
-              Home
+            <Link to="/events" className="text-sm font-semibold text-subtext-leaf hover:text-primary transition-colors">
+              Discover Events
             </Link>
             <Link
               to="/organizer"
@@ -53,7 +84,7 @@ export function EventLandingPage() {
           <div className="space-y-5">
             <EcoCertifiedBadge variant="default">Eco-Certified Event</EcoCertifiedBadge>
             <h1 className="text-4xl md:text-5xl font-black leading-tight dark:text-white">
-              Eco-Innovate Summit 2026
+              {event.name}
             </h1>
             <p className="text-lg text-subtext-leaf">
               A public event page that clearly shows why this event earned a green badge and how the venue backs it with
@@ -61,10 +92,10 @@ export function EventLandingPage() {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <p className="rounded-xl bg-white dark:bg-white/5 border border-border-green px-4 py-3 text-sm font-semibold">
-                Date: April 21, 2026
+                Date: {event.dateLabel}
               </p>
               <p className="rounded-xl bg-white dark:bg-white/5 border border-border-green px-4 py-3 text-sm font-semibold">
-                Venue: Green Canopy Hall, Portland
+                Venue: {event.venueName}, {event.city}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -76,14 +107,15 @@ export function EventLandingPage() {
               </button>
               <button
                 type="button"
+                onClick={handleShare}
                 className="rounded-xl border border-border-green bg-white px-6 py-3 font-bold hover:bg-soft-green transition-colors"
               >
-                Share Event
+                {shareState === "copied" ? "Link Copied" : shareState === "error" ? "Copy Failed" : "Share Event"}
               </button>
             </div>
           </div>
           <div className="relative overflow-hidden rounded-2xl border border-border-green shadow-lg">
-            <img src={EVENT_IMAGE} alt="Crowd at a sustainability conference event" className="h-full w-full object-cover" />
+            <img src={event.imageUrl} alt={event.name} className="h-full w-full object-cover" />
           </div>
         </section>
 
@@ -93,7 +125,7 @@ export function EventLandingPage() {
             This badge is based on concrete venue standards and operational practices, not just branding.
           </p>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
-            {ECO_PROOFS.map((proof) => (
+            {event.ecoProofs.map((proof) => (
               <article
                 key={proof.title}
                 className="rounded-xl border border-border-green bg-background-light dark:bg-background-dark/40 p-4"
@@ -112,19 +144,19 @@ export function EventLandingPage() {
           <article className="rounded-2xl border border-border-green bg-white dark:bg-white/5 p-6 md:p-8">
             <h2 className="text-2xl font-black dark:text-white">Venue sustainability profile</h2>
             <p className="mt-2 text-subtext-leaf">
-              Green Canopy Hall is independently audited and maintains long-term sustainability certifications.
+              {event.venueName} is independently audited and maintains long-term sustainability certifications.
             </p>
             <div className="mt-5">
               <div className="flex items-center justify-between text-sm font-bold">
                 <span>Sustainability Index</span>
-                <span>4.7 / 5.0</span>
+                <span>{event.sustainabilityScore.toFixed(1)} / 5.0</span>
               </div>
               <div className="mt-2 h-2 rounded-full bg-neutral-bg dark:bg-white/10 overflow-hidden">
-                <div className="h-full w-[94%] bg-primary rounded-full" />
+                <div className="h-full bg-primary rounded-full" style={{ width: `${scorePercent}%` }} />
               </div>
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
-              {VENUE_CERTIFICATIONS.map((cert) => (
+              {event.certifications.map((cert) => (
                 <span
                   key={cert}
                   className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wide"
@@ -141,14 +173,14 @@ export function EventLandingPage() {
             </div>
           </article>
           <div className="overflow-hidden rounded-2xl border border-border-green shadow-lg">
-            <img src={VENUE_IMAGE} alt="Eco-certified venue with indoor plants and natural light" className="h-full w-full object-cover" />
+            <img src={event.venueImageUrl} alt={`${event.venueName} eco-certified venue`} className="h-full w-full object-cover" />
           </div>
         </section>
 
         <section className="rounded-2xl border border-border-green bg-white dark:bg-white/5 p-6 md:p-8">
           <h2 className="text-2xl font-black dark:text-white">Agenda highlights</h2>
           <div className="mt-5 grid gap-3 md:grid-cols-2">
-            {AGENDA_ITEMS.map((item) => (
+            {event.agenda.map((item) => (
               <div key={item.time} className="rounded-xl border border-border-green bg-background-light dark:bg-background-dark/40 p-4">
                 <p className="text-xs font-black text-primary">{item.time}</p>
                 <p className="mt-1 font-semibold dark:text-white">{item.title}</p>
