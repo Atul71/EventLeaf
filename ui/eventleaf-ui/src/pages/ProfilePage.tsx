@@ -24,7 +24,7 @@ export function ProfilePage() {
     createEvent: "/organizer/events",
     editProfile: "#/profile/edit",
     shareImpact: "#/profile/share-impact",
-    discover: "#/discover",
+    discover: "/events",
     impact: "#/impact",
     filter: "#/profile/filter",
     viewPastTickets: "#/profile/past-tickets",
@@ -39,7 +39,7 @@ export function ProfilePage() {
             <Logo />
             <nav className="hidden md:flex items-center gap-6">
               <Link to={mockLinks.discover} className="text-sm font-semibold hover:text-primary transition-colors">
-                Discover
+                Discover Events
               </Link>
               <Link to={mockLinks.impact} className="text-sm font-semibold hover:text-primary transition-colors">
                 Impact
@@ -60,13 +60,6 @@ export function ProfilePage() {
             >
               <span className="material-symbols-outlined text-xl">add</span>
               Create Event
-            </Link>
-            <Link
-              to="/events/eco-innovate-summit"
-              className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-lg border border-border-leaf dark:border-white/10 text-subtext-leaf font-bold text-sm hover:text-primary hover:border-primary transition-colors"
-            >
-              <span className="material-symbols-outlined text-xl">campaign</span>
-              Event Landing
             </Link>
             <div className="hidden sm:flex max-w-xs w-full lg:max-w-[200px]">
               <div className="relative w-full">
