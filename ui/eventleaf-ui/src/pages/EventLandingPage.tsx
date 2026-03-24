@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Logo } from "../components/Logo";
 import { EcoCertifiedBadge } from "../components/organizer/EcoCertifiedBadge";
@@ -7,7 +6,6 @@ import { getEventBySlug } from "../data/events";
 export function EventLandingPage() {
   const { slug } = useParams<{ slug: string }>();
   const event = getEventBySlug(slug);
-  const [shareState, setShareState] = useState<"idle" | "copied" | "error">("idle");
 
   if (!event) {
     return (
@@ -42,22 +40,14 @@ export function EventLandingPage() {
           text: `Check out this eco-certified event: ${event.name}`,
           url: eventUrl,
         });
-        setShareState("copied");
       } else {
         await navigator.clipboard.writeText(eventUrl);
-        setShareState("copied");
       }
     } catch {
-      // Fallback path when Web Share is unavailable/blocked.
       try {
         await navigator.clipboard.writeText(eventUrl);
-        setShareState("copied");
-      } catch {
-        setShareState("error");
-      }
+      } catch {}
     }
-
-    setTimeout(() => setShareState("idle"), 2000);
   }
 
   return (
@@ -110,33 +100,12 @@ export function EventLandingPage() {
                 onClick={handleShare}
                 className="rounded-xl border border-border-green bg-white px-6 py-3 font-bold hover:bg-soft-green transition-colors"
               >
-                {shareState === "copied" ? "Link Copied" : shareState === "error" ? "Copy Failed" : "Share Event"}
+                Share Event
               </button>
             </div>
           </div>
           <div className="relative overflow-hidden rounded-2xl border border-border-green shadow-lg">
             <img src={event.imageUrl} alt={event.name} className="h-full w-full object-cover" />
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-border-green bg-white dark:bg-white/5 p-6 md:p-8">
-          <h2 className="text-2xl font-black dark:text-white">Why this event is green</h2>
-          <p className="mt-2 text-subtext-leaf">
-            This badge is based on concrete venue standards and operational practices, not just branding.
-          </p>
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            {event.ecoProofs.map((proof) => (
-              <article
-                key={proof.title}
-                className="rounded-xl border border-border-green bg-background-light dark:bg-background-dark/40 p-4"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">{proof.icon}</span>
-                  <h3 className="font-bold dark:text-white">{proof.title}</h3>
-                </div>
-                <p className="mt-2 text-sm text-subtext-leaf">{proof.detail}</p>
-              </article>
-            ))}
           </div>
         </section>
 
