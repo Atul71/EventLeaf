@@ -29,15 +29,17 @@ export function EventLandingPage() {
     );
   }
 
-  const scorePercent = Math.round((event.sustainabilityScore / 5) * 100);
-  const eventUrl = `${window.location.origin}/events/${event.slug}`;
+  const currentEvent = event;
+  const scorePercent = Math.round((currentEvent.sustainabilityScore / 5) * 100);
+  const eventUrl = `${window.location.origin}/events/${currentEvent.slug}`;
+  const trailerWatchUrl = `https://www.youtube.com/watch?v=${currentEvent.trailerYoutubeId}`;
 
   async function handleShare() {
     try {
       if (navigator.share) {
         await navigator.share({
-          title: event.name,
-          text: `Check out this eco-certified event: ${event.name}`,
+          title: currentEvent.name,
+          text: `Check out this eco-certified event: ${currentEvent.name}`,
           url: eventUrl,
         });
       } else {
@@ -46,7 +48,9 @@ export function EventLandingPage() {
     } catch {
       try {
         await navigator.clipboard.writeText(eventUrl);
-      } catch {}
+      } catch {
+        return;
+      }
     }
   }
 
@@ -74,7 +78,7 @@ export function EventLandingPage() {
           <div className="space-y-5">
             <EcoCertifiedBadge variant="default">Eco-Certified Event</EcoCertifiedBadge>
             <h1 className="text-4xl md:text-5xl font-black leading-tight dark:text-white">
-              {event.name}
+              {currentEvent.name}
             </h1>
             <p className="text-lg text-subtext-leaf">
               A public event page that clearly shows why this event earned a green badge and how the venue backs it with
@@ -82,10 +86,10 @@ export function EventLandingPage() {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <p className="rounded-xl bg-white dark:bg-white/5 border border-border-green px-4 py-3 text-sm font-semibold">
-                Date: {event.dateLabel}
+                Date: {currentEvent.dateLabel}
               </p>
               <p className="rounded-xl bg-white dark:bg-white/5 border border-border-green px-4 py-3 text-sm font-semibold">
-                Venue: {event.venueName}, {event.city}
+                Venue: {currentEvent.venueName}, {currentEvent.city}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -102,10 +106,34 @@ export function EventLandingPage() {
               >
                 Share Event
               </button>
+              <a
+                href={trailerWatchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl border border-border-green bg-white px-4 py-3 font-bold text-text-leaf hover:bg-soft-green transition-colors dark:bg-white/5 dark:hover:bg-white/10 dark:text-white"
+                aria-label={`Watch trailer for ${currentEvent.name} on YouTube (opens in new tab)`}
+              >
+                <svg className="size-6 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    fill="#FF0000"
+                    d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
+                  />
+                </svg>
+                <span>Trailer</span>
+                <span className="material-symbols-outlined text-subtext-leaf text-lg" aria-hidden>
+                  open_in_new
+                </span>
+              </a>
             </div>
           </div>
           <div className="relative overflow-hidden rounded-2xl border border-border-green shadow-lg">
-            <img src={event.imageUrl} alt={event.name} className="h-full w-full object-cover" />
+            <img
+              src={currentEvent.imageUrl}
+              alt={currentEvent.name}
+              className="h-full w-full object-cover"
+              decoding="async"
+              fetchPriority="high"
+            />
           </div>
         </section>
 
@@ -113,19 +141,19 @@ export function EventLandingPage() {
           <article className="rounded-2xl border border-border-green bg-white dark:bg-white/5 p-6 md:p-8">
             <h2 className="text-2xl font-black dark:text-white">Venue sustainability profile</h2>
             <p className="mt-2 text-subtext-leaf">
-              {event.venueName} is independently audited and maintains long-term sustainability certifications.
+              {currentEvent.venueName} is independently audited and maintains long-term sustainability certifications.
             </p>
             <div className="mt-5">
               <div className="flex items-center justify-between text-sm font-bold">
                 <span>Sustainability Index</span>
-                <span>{event.sustainabilityScore.toFixed(1)} / 5.0</span>
+                <span>{currentEvent.sustainabilityScore.toFixed(1)} / 5.0</span>
               </div>
               <div className="mt-2 h-2 rounded-full bg-neutral-bg dark:bg-white/10 overflow-hidden">
                 <div className="h-full bg-primary rounded-full" style={{ width: `${scorePercent}%` }} />
               </div>
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
-              {event.certifications.map((cert) => (
+              {currentEvent.certifications.map((cert) => (
                 <span
                   key={cert}
                   className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wide"
@@ -136,20 +164,30 @@ export function EventLandingPage() {
             </div>
             <div className="mt-6 rounded-xl border border-border-green bg-background-light dark:bg-background-dark/40 p-4">
               <p className="text-sm font-bold">Transparency</p>
-              <p className="mt-1 text-sm text-subtext-leaf">
-                Verification source: Third-party audit report (updated Jan 2026) + organizer operations checklist.
-              </p>
+              <div className="mt-1 text-sm text-subtext-leaf space-y-1">
+                <p>Verification source: Third-party audit report (updated Jan 2026) + organizer operations checklist.</p>
+                <p>
+                  Transit distance: {currentEvent.publicTransitDistanceMeters}m from nearest major transit hub (500m threshold for
+                  transit accessibility).
+                </p>
+              </div>
             </div>
           </article>
           <div className="overflow-hidden rounded-2xl border border-border-green shadow-lg">
-            <img src={event.venueImageUrl} alt={`${event.venueName} eco-certified venue`} className="h-full w-full object-cover" />
+            <img
+              src={currentEvent.venueImageUrl}
+              alt={`${currentEvent.venueName} eco-certified venue`}
+              className="h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
+            />
           </div>
         </section>
 
         <section className="rounded-2xl border border-border-green bg-white dark:bg-white/5 p-6 md:p-8">
           <h2 className="text-2xl font-black dark:text-white">Agenda highlights</h2>
           <div className="mt-5 grid gap-3 md:grid-cols-2">
-            {event.agenda.map((item) => (
+            {currentEvent.agenda.map((item) => (
               <div key={item.time} className="rounded-xl border border-border-green bg-background-light dark:bg-background-dark/40 p-4">
                 <p className="text-xs font-black text-primary">{item.time}</p>
                 <p className="mt-1 font-semibold dark:text-white">{item.title}</p>
