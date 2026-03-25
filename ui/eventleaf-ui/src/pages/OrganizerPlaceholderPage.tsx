@@ -32,10 +32,19 @@ export function OrganizerPlaceholderPage() {
             </p>
           )}
           <p className="text-subtext-leaf mb-6">
-            {location.pathname === "/organizer/events/create"
-              ? "The full create-event form will go here. You selected a sustainable venue from the browser."
+            {location.pathname === "/organizer/events"
+              ? "Create and manage events from the guided wizard."
               : "This section is not built yet. Use the sidebar to open Overview or Browse Sustainable Venues."}
           </p>
+          {location.pathname === "/organizer/events" && (
+            <Link
+              to="/organizer/events/create"
+              className="inline-flex items-center gap-2 bg-primary text-background-dark font-bold px-5 py-2.5 rounded-lg hover:bg-primary/90 mb-4"
+            >
+              <span className="material-symbols-outlined">add_circle</span>
+              Create event (wizard)
+            </Link>
+          )}
           <Link
             to="/organizer"
             className="inline-flex items-center gap-2 bg-primary text-background-dark font-bold px-5 py-2.5 rounded-lg hover:bg-primary/90"
