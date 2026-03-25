@@ -55,7 +55,7 @@ export function OrganizerDashboardPage() {
               <span>Browse Sustainable Venues</span>
             </Link>
             <Link
-              to="/organizer/events"
+              to="/organizer/events/create"
               className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-background-dark font-bold px-5 py-2.5 rounded-lg transition-all shadow-sm"
             >
               <span className="material-symbols-outlined text-xl">add_circle</span>
@@ -274,7 +274,7 @@ export function OrganizerDashboardPage() {
 
               {/* Add event card */}
               <Link
-                to="/organizer/events"
+                to="/organizer/events/create"
                 className="border-2 border-dashed border-border-green rounded-xl flex flex-col items-center justify-center p-8 text-subtext-leaf hover:bg-white dark:hover:bg-white/5 hover:border-primary transition-all group min-h-[280px]"
               >
                 <span className="material-symbols-outlined text-4xl mb-2 group-hover:text-primary">
