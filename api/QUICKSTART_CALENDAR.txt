@@ -1,0 +1,101 @@
+================================================================================
+USE ICS — NOT GOOGLE (simplest for class / no Google account needed)
+================================================================================
+
+ICS = download a small ".ics" file. Open it → Apple / Google / Outlook adds the event.
+You do NOT need Google Cloud, payment, or OAuth for this path.
+
+Ignore GOOGLE_* lines in .env (leave them empty).
+
+================================================================================
+STEP 0 — One-time: Docker Desktop
+================================================================================
+Install Docker Desktop for Mac and start it (whale icon running).
+
+================================================================================
+STEP 1 — .env at project root (folder that contains "api" and "ui")
+================================================================================
+File: EventLeaf/.env
+
+If missing:
+  cp .env.example .env
+
+Keep these (defaults are fine for local dev):
+  DB_HOST=localhost
+  DB_PORT=5433
+  DB_NAME=eventleaf_db
+  DB_USER=eventleaf_user
+  DB_PASSWORD=eventleaf_password
+  APP_PORT=3000
+
+================================================================================
+STEP 2 — Start the database (terminal)
+================================================================================
+  cd /path/to/EventLeaf/api
+  docker compose up -d
+
+Wait ~10 seconds. First time, Docker creates tables from api/db/schema.sql automatically.
+
+If you had an OLD database volume from before the team added the Google table and
+the API errors about "google_calendar_event_mappings", either:
+
+  A) Reset DB (deletes local data):  docker compose down -v   then   docker compose up -d
+
+  OR
+
+  B) Run once:  psql "postgres://eventleaf_user:eventleaf_password@localhost:5433/eventleaf_db" -f db/patch_add_google_calendar_mappings.sql
+
+================================================================================
+STEP 3 — Start the API (new terminal tab)
+================================================================================
+  cd /path/to/EventLeaf/api
+  go run ./cmd/server
+
+Leave it running. You should see "Server starting on port 3000".
+
+================================================================================
+STEP 4 — Get one user id and one venue id (copy-paste)
+================================================================================
+  docker exec -i eventleaf-postgres psql -U eventleaf_user -d eventleaf_db -t -c "SELECT id FROM users LIMIT 1;"
+  docker exec -i eventleaf-postgres psql -U eventleaf_user -d eventleaf_db -t -c "SELECT id FROM venues LIMIT 1;"
+
+Copy the UUIDs (trim spaces). You need them in the next step.
+
+================================================================================
+STEP 5 — Create an event (replace USER_ID and VENUE_ID)
+================================================================================
+  curl -s -X POST http://localhost:3000/api/v1/events \
+    -H "Content-Type: application/json" \
+    -d '{
+      "title": "My test event",
+      "description": "Testing ICS download",
+      "organizer_id": "PASTE_USER_UUID_HERE",
+      "venue_id": "PASTE_VENUE_UUID_HERE",
+      "event_date": "2026-06-01",
+      "event_start_time": "10:00:00",
+      "event_end_time": "11:00:00",
+      "ticket_price": 0,
+      "total_capacity": 50,
+      "status": "draft",
+      "eco_attribute_ids": []
+    }'
+
+In the JSON response, find "id" under "event" — that is EVENT_ID.
+
+================================================================================
+STEP 6 — Download the calendar file
+================================================================================
+Browser:
+  http://localhost:3000/api/v1/events/PASTE_EVENT_ID_HERE/calendar.ics
+
+Or:
+  curl -OJ http://localhost:3000/api/v1/events/PASTE_EVENT_ID_HERE/calendar.ics
+
+Open the downloaded file → your calendar app will offer to add the event.
+
+================================================================================
+Optional later: Google Calendar auto-sync
+================================================================================
+Only if your team requires it: fill GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
+GOOGLE_REFRESH_TOKEN in .env and create events with "status": "published".
+See team docs or ask for OAuth setup help — ICS works without any of this.

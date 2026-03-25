@@ -197,6 +197,22 @@ CREATE TABLE user_favorites (
 CREATE INDEX idx_user_favorites_user_id ON user_favorites(user_id);
 CREATE INDEX idx_user_favorites_event_id ON user_favorites(event_id);
 
+-- Google Calendar Event Mappings Table
+-- Links internal events to Google Calendar event IDs for idempotent sync.
+CREATE TABLE google_calendar_event_mappings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_id UUID NOT NULL UNIQUE REFERENCES events(id) ON DELETE CASCADE,
+    google_event_id VARCHAR(255) NOT NULL,
+    calendar_id VARCHAR(255) NOT NULL,
+    html_link VARCHAR(500),
+    last_synced_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_google_calendar_mappings_event_id ON google_calendar_event_mappings(event_id);
+CREATE INDEX idx_google_calendar_mappings_google_event_id ON google_calendar_event_mappings(google_event_id);
+
 -- Create trigger to update updated_at timestamps
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -220,6 +236,9 @@ CREATE TRIGGER update_tickets_updated_at BEFORE UPDATE ON tickets
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_event_reviews_updated_at BEFORE UPDATE ON event_reviews
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_google_calendar_event_mappings_updated_at BEFORE UPDATE ON google_calendar_event_mappings
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Seed data for eco attributes

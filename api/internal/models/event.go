@@ -53,4 +53,6 @@ type CreateEventResponse struct {
 	IsGreen         bool     `json:"is_green"`
 	GreenCriteria   []string `json:"green_criteria_met,omitempty"`
 	NotGreenReasons []string `json:"green_criteria_not_met,omitempty"`
+	CalendarSyncError string `json:"calendar_sync_error,omitempty"`
+	CalendarICSPath   string `json:"calendar_ics_path,omitempty"`
 }
