@@ -12,6 +12,11 @@ type Config struct {
 	DBUser     string
 	DBPassword string
 	AppPort    string
+	GoogleClientID          string
+	GoogleClientSecret      string
+	GoogleRefreshToken      string
+	GoogleCalendarID        string
+	GoogleCalendarTimeZone  string
 }
 
 func Load() *Config {
@@ -22,6 +27,11 @@ func Load() *Config {
 		DBUser:     getEnv("DB_USER", "eventleaf_user"),
 		DBPassword: getEnv("DB_PASSWORD", "eventleaf_password"),
 		AppPort:    getEnv("APP_PORT", "3000"),
+		GoogleClientID:         getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret:     getEnv("GOOGLE_CLIENT_SECRET", ""),
+		GoogleRefreshToken:     getEnv("GOOGLE_REFRESH_TOKEN", ""),
+		GoogleCalendarID:       getEnv("GOOGLE_CALENDAR_ID", "primary"),
+		GoogleCalendarTimeZone: getEnv("GOOGLE_CALENDAR_TIMEZONE", "America/New_York"),
 	}
 }
 
