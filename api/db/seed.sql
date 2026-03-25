@@ -80,8 +80,6 @@ SELECT
 WHERE NOT EXISTS (SELECT 1 FROM venues WHERE name = 'Downtown Community Hall');
 
 -- Insert sample events
-SELECT * FROM events WHERE title = 'Earth Day 2024 Celebration' LIMIT 1
-INTO event_check;
 
 INSERT INTO events (
     title, description, organizer_id, venue_id, event_date, event_start_time, event_end_time,

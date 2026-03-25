@@ -2,9 +2,11 @@ package repository
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Atul71/EventLeaf/api/internal/db"
 	"github.com/Atul71/EventLeaf/api/internal/models"
+	"github.com/google/uuid"
 )
 
 type EventRepository struct {
@@ -90,4 +92,58 @@ func emptyToNull(s string) interface{} {
 		return nil
 	}
 	return s
+}
+
+// GetByID retrieves an event by ID
+func (r *EventRepository) GetByID(ctx context.Context, eventID uuid.UUID) (*models.Event, error) {
+	var event models.Event
+	err := r.db.Pool.QueryRow(ctx,
+		`SELECT id, title, description, organizer_id, venue_id, event_date, event_start_time::text, event_end_time::text,
+			is_eco_friendly, eco_summary, ticket_price, total_capacity, available_tickets,
+			status, visibility, image_url, event_url, category, has_digital_ticketing, has_paperless_checkin,
+			created_at, updated_at
+		FROM events WHERE id = $1`,
+		eventID,
+	).Scan(
+		&event.ID, &event.Title, &event.Description, &event.OrganizerID, &event.VenueID,
+		&event.EventDate, &event.EventStartTime, &event.EventEndTime,
+		&event.IsEcoFriendly, &event.EcoSummary, &event.TicketPrice, &event.TotalCapacity, &event.AvailableTickets,
+		&event.Status, &event.Visibility, &event.ImageURL, &event.EventURL, &event.Category,
+		&event.HasDigitalTicketing, &event.HasPaperlessCheckin,
+		&event.CreatedAt, &event.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get event: %w", err)
+	}
+	return &event, nil
+}
+
+// GetEcoAttributesForEvent retrieves all eco attribute names associated with an event
+func (r *EventRepository) GetEcoAttributesForEvent(ctx context.Context, eventID uuid.UUID) ([]string, error) {
+	rows, err := r.db.Pool.Query(ctx,
+		`SELECT ea.name FROM eco_attributes ea
+		 INNER JOIN event_eco_attributes eea ON ea.id = eea.eco_attribute_id
+		 WHERE eea.event_id = $1
+		 ORDER BY ea.name`,
+		eventID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query eco attributes: %w", err)
+	}
+	defer rows.Close()
+
+	var names []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, fmt.Errorf("failed to scan eco attribute: %w", err)
+		}
+		names = append(names, name)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating eco attributes: %w", err)
+	}
+
+	return names, nil
 }

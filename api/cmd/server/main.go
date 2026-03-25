@@ -58,6 +58,7 @@ func main() {
 	v1 := router.Group("/api/v1")
 	{
 		v1.POST("/events", eventHandler.CreateEvent)
+		v1.GET("/events/:id/green-metrics", eventHandler.GetEventGreenMetrics)
 		v1.GET("/eco-attributes", eventHandler.ListEcoAttributes)
 
 		// Venue CRUD endpoints

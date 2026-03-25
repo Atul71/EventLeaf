@@ -7,6 +7,7 @@ import (
 	"github.com/Atul71/EventLeaf/api/internal/repository"
 	"github.com/Atul71/EventLeaf/api/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type EventHandler struct {
@@ -101,4 +102,58 @@ func (h *EventHandler) ListEcoAttributes(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, attrs)
+}
+
+// GetEventGreenMetrics godoc
+// @Summary      Get green metrics for an event
+// @Description  Calculates and returns sustainability metrics including carbon footprint reduction, energy efficiency, and waste reduction potential
+// @Tags         events
+// @Produce      json
+// @Param        id   path      string                     true  "Event ID"
+// @Success      200  {object}  models.GreenMetricsResponse
+// @Failure      400  {object}  map[string]string  "Invalid event ID"
+// @Failure      404  {object}  map[string]string  "Event not found"
+// @Failure      500  {object}  map[string]string  "Server error"
+// @Router       /events/{id}/green-metrics [get]
+func (h *EventHandler) GetEventGreenMetrics(c *gin.Context) {
+	eventIDStr := c.Param("id")
+	eventID, err := uuid.Parse(eventIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID format"})
+		return
+	}
+
+	ctx := c.Request.Context()
+
+	// Fetch the event
+	event, err := h.eventRepo.GetByID(ctx, eventID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+		return
+	}
+
+	// Fetch venue information if event has a venue
+	var venue *models.Venue
+	if event.VenueID != nil {
+		venue, err = h.venueRepo.GetByID(ctx, *event.VenueID)
+		if err != nil {
+			// Log but don't fail - venue might be deleted
+			venue = nil
+		}
+	}
+
+	// Fetch eco attributes for the event
+	ecoAttributeNames, err := h.eventRepo.GetEcoAttributesForEvent(ctx, eventID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch eco attributes"})
+		return
+	}
+
+	// Calculate green metrics
+	greenMetrics := service.CalculateGreenMetrics(eventID, event, venue, ecoAttributeNames)
+
+	c.JSON(http.StatusOK, models.GreenMetricsResponse{
+		Event:        *event,
+		GreenMetrics: *greenMetrics,
+	})
 }
