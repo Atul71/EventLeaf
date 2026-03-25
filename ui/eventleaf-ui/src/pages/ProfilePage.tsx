@@ -53,7 +53,7 @@ export function ProfilePage() {
     createEvent: "/organizer/events",
     editProfile: "#/profile/edit",
     shareImpact: "#/profile/share-impact",
-    discover: "#/discover",
+    discover: "/events",
     impact: "#/impact",
     filter: "#/profile/filter",
     downloadWallet: "#/download-wallet",
@@ -71,7 +71,7 @@ export function ProfilePage() {
             <Logo />
             <nav className="hidden md:flex items-center gap-6">
               <Link to={mockLinks.discover} className="text-sm font-semibold hover:text-primary transition-colors">
-                Discover
+                Discover Events
               </Link>
               <Link to={mockLinks.impact} className="text-sm font-semibold hover:text-primary transition-colors">
                 Impact
