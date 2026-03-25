@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/Atul71/EventLeaf/api/internal/models"
-	"github.com/Atul71/EventLeaf/api/internal/repository"
 	"github.com/Atul71/EventLeaf/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -13,18 +12,18 @@ import (
 )
 
 type EventHandler struct {
-	eventRepo         *repository.EventRepository
-	venueRepo         *repository.VenueRepository
-	ecoAttrRepo       *repository.EcoAttributeRepository
-	googleCalendar    *service.GoogleCalendarService
-	calendarTimeZone  string
+	eventRepo        EventRepository
+	venueRepo        VenueRepository
+	ecoAttrRepo      EcoAttributeRepository
+	googleCalendar   CalendarPublisher
+	calendarTimeZone string
 }
 
 func NewEventHandler(
-	eventRepo *repository.EventRepository,
-	venueRepo *repository.VenueRepository,
-	ecoAttrRepo *repository.EcoAttributeRepository,
-	googleCalendar *service.GoogleCalendarService,
+	eventRepo EventRepository,
+	venueRepo VenueRepository,
+	ecoAttrRepo EcoAttributeRepository,
+	googleCalendar CalendarPublisher,
 	calendarTimeZone string,
 ) *EventHandler {
 	return &EventHandler{
