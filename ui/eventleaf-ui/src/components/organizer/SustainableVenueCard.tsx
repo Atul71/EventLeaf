@@ -44,7 +44,7 @@ export function SustainableVenueCard({ venue, onSelect }: SustainableVenueCardPr
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-xl font-bold text-text-leaf dark:text-white">{venue.name}</h3>
           <div className="flex items-center gap-1 text-primary">
-            <span className="text-sm font-bold">{venue.rating}</span>
+            <span className="text-sm font-bold">{venue.rating.toFixed(1)}</span>
             <span className="material-symbols-outlined text-sm fill">star</span>
           </div>
         </div>
@@ -55,7 +55,7 @@ export function SustainableVenueCard({ venue, onSelect }: SustainableVenueCardPr
         <div className="space-y-3 mb-6">
           <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-subtext-leaf">
             <span>Sustainability Index</span>
-            <span>{venue.sustainabilityIndex}/5.0</span>
+            <span>{venue.sustainabilityIndex.toFixed(1)}/5.0</span>
           </div>
           <div className="w-full bg-gray-100 dark:bg-gray-800 h-2 rounded-full overflow-hidden">
             <div
