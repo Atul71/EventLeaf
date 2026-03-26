@@ -17,7 +17,7 @@ Pritika Kannapiran
 Vivek Chenganassery  
 API: Integrate Google Calendar API Service - 5 story points
 
-t 
+
 
 Pritika Kannapiran  
 API: Fetch Event Impact Metrics - 2 story points

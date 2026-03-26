@@ -21,6 +21,7 @@ import (
 	"github.com/Atul71/EventLeaf/api/internal/db"
 	"github.com/Atul71/EventLeaf/api/internal/handler"
 	"github.com/Atul71/EventLeaf/api/internal/repository"
+	"github.com/Atul71/EventLeaf/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	swaggerFiles "github.com/swaggo/files"
@@ -46,6 +47,20 @@ func main() {
 	ecoAttrRepo := repository.NewEcoAttributeRepository(database)
 	userRepo := repository.NewUserRepository(database)
 	eventHandler := handler.NewEventHandler(eventRepo, venueRepo, ecoAttrRepo)
+	googleCalendarRepo := repository.NewGoogleCalendarRepository(database)
+	googleCalendarSvc, err := service.NewGoogleCalendarService(
+		ctx,
+		googleCalendarRepo,
+		cfg.GoogleClientID,
+		cfg.GoogleClientSecret,
+		cfg.GoogleRefreshToken,
+		cfg.GoogleCalendarID,
+		cfg.GoogleCalendarTimeZone,
+	)
+	if err != nil {
+		log.Fatalf("Failed to initialize Google Calendar service: %v", err)
+	}
+	eventHandler := handler.NewEventHandler(eventRepo, venueRepo, ecoAttrRepo, googleCalendarSvc, cfg.GoogleCalendarTimeZone)
 	venueHandler := handler.NewVenueHandler(venueRepo)
 	bootstrapHandler := handler.NewBootstrapHandler(userRepo)
 
@@ -62,6 +77,7 @@ func main() {
 		v1.GET("/events", eventHandler.ListEvents)
 		v1.GET("/events/:id", eventHandler.GetEvent)
 		v1.POST("/events", eventHandler.CreateEvent)
+		v1.GET("/events/:id/calendar.ics", eventHandler.GetEventCalendarICS)
 		v1.GET("/eco-attributes", eventHandler.ListEcoAttributes)
 		v1.GET("/bootstrap/organizer-id", bootstrapHandler.DemoOrganizerID)
 

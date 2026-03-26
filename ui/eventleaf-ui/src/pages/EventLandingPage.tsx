@@ -1,253 +1,190 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Logo } from "../components/Logo";
-import { EcoCertifiedBadge } from "../components/organizer/EcoCertifiedBadge";
-import { fetchEventById, type ApiEvent } from "../api/eventleafApi";
-import {
-  certificationsFromApi,
-  ecoProofsFromApi,
-  sustainabilityScoreFromApi,
-  venueImageUrlForEvent,
-} from "../data/discoverPresentation";
 
-const FALLBACK_HERO =
-  "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1400&q=80";
+// Lush forest canopy – environment-focused hero (Unsplash, free to use)
+const HERO_IMAGE =
+  "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1200&q=80";
 
-function formatEventWhen(e: ApiEvent): string {
-  try {
-    const d = new Date(e.event_date);
-    const dateStr = Number.isNaN(d.getTime())
-      ? e.event_date
-      : d.toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-    return `${dateStr} · ${e.event_start_time.slice(0, 5)}–${e.event_end_time.slice(0, 5)}`;
-  } catch {
-    return e.event_date;
-  }
-}
+const STATS = [
+  { label: "Metric 1", value: "—", change: "" },
+  { label: "Metric 2", value: "—", change: "" },
+  { label: "Metric 3", value: "—", change: "" },
+  { label: "Metric 4", value: "—", change: "" },
+] as const;
 
-export function EventLandingPage() {
-  const { eventId } = useParams<{ eventId: string }>();
-  const [event, setEvent] = useState<ApiEvent | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+const FEATURES = [
+  {
+    icon: "confirmation_number",
+    title: "Digital Ticketing",
+    description:
+      "Eliminate paper waste completely with high-speed QR entries, digital-first check-ins, and automated mobile passes.",
+  },
+  {
+    icon: "verified_user",
+    title: "Eco-Labeling",
+    description:
+      "Certify your event's sustainability with our built-in auditor, green checklists, and verified impact badges for your brand.",
+  },
+  {
+    icon: "bar_chart_4_bars",
+    title: "Real-time Analytics",
+    description:
+      "Track live attendance, resource consumption, and your exact carbon footprint in one integrated, beautiful dashboard.",
+  },
+] as const;
 
-  useEffect(() => {
-    if (!eventId) {
-      setLoading(false);
-      setError("Missing event id");
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    fetchEventById(eventId)
-      .then((data) => {
-        if (!cancelled) setEvent(data);
-      })
-      .catch((e: Error) => {
-        if (!cancelled) setError(e.message || "Event not found");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [eventId]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background-light dark:bg-background-dark text-text-leaf flex items-center justify-center px-6">
-        <p className="text-subtext-leaf font-semibold">Loading event…</p>
-      </div>
-    );
-  }
-
-  if (error || !event) {
-    return (
-      <div className="min-h-screen bg-background-light dark:bg-background-dark text-text-leaf">
-        <header className="sticky top-0 z-40 border-b border-border-green bg-white/80 dark:bg-background-dark/80 backdrop-blur-md">
-          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-            <Logo />
+export function LandingPage() {
+  return (
+    <div className="bg-background-light dark:bg-background-dark text-text-leaf selection:bg-primary/30 min-h-screen">
+      <header className="sticky top-0 z-50 w-full bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-border-green dark:border-[#243a26]">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Logo />
+          <nav className="hidden md:flex items-center gap-8">
+            <a className="text-sm font-semibold hover:text-primary transition-colors dark:text-gray-300" href="#features">
+              Features
+            </a>
+            <a className="text-sm font-semibold hover:text-primary transition-colors dark:text-gray-300" href="#eco-impact">
+              Eco-Impact
+            </a>
+            <a className="text-sm font-semibold hover:text-primary transition-colors dark:text-gray-300" href="#about">
+              About
+            </a>
+          </nav>
+          <div className="flex items-center gap-3">
             <Link
-              to="/events"
-              className="rounded-lg border border-border-green px-4 py-2 text-sm font-bold hover:bg-soft-green transition-colors"
+              to="/login"
+              className="px-4 py-2 text-sm font-bold hover:text-primary transition-colors dark:text-gray-300"
             >
-              Back to Discover Events
+              Login
+            </Link>
+            <Link
+              to="/signup"
+              className="bg-primary text-background-dark px-5 py-2 rounded-lg text-sm font-bold hover:opacity-90 transition-all shadow-sm"
+            >
+              Sign Up
             </Link>
           </div>
-        </header>
-        <main className="mx-auto max-w-3xl px-6 py-20 text-center">
-          <h1 className="text-3xl font-black dark:text-white">Event not found</h1>
-          <p className="mt-3 text-subtext-leaf">{error || "The event link looks incorrect or no longer exists."}</p>
-        </main>
-      </div>
-    );
-  }
-
-  const ev = event;
-  const score = sustainabilityScoreFromApi(ev);
-  const scorePercent = Math.round((score / 5) * 100);
-  const landingProofs = ecoProofsFromApi(ev);
-  const landingCerts = certificationsFromApi(ev);
-  const venueHero = venueImageUrlForEvent(ev);
-  const eventUrl = `${window.location.origin}/events/${ev.id}`;
-  const venueName = ev.venue_name?.trim() || "Venue";
-  const cityStr = ev.venue_city?.trim() || "";
-  const heroImg = ev.image_url || FALLBACK_HERO;
-  const priceLabel = ev.ticket_price <= 0 ? "Free" : `$${ev.ticket_price.toFixed(2)}`;
-
-  async function handleShare() {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: ev.title,
-          text: `Check out this event: ${ev.title}`,
-          url: eventUrl,
-        });
-      } else {
-        await navigator.clipboard.writeText(eventUrl);
-      }
-    } catch {
-      try {
-        await navigator.clipboard.writeText(eventUrl);
-      } catch {
-        /* ignore */
-      }
-    }
-  }
-
-  return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark text-text-leaf">
-      <header className="sticky top-0 z-40 border-b border-border-green bg-white/80 dark:bg-background-dark/80 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <Logo />
-          <nav className="flex items-center gap-4">
-            <Link
-              to="/events"
-              className="inline-flex items-center gap-2 rounded-lg border border-border-green px-3 py-2 text-sm font-bold hover:bg-soft-green transition-colors text-text-leaf dark:text-white"
-            >
-              <span className="material-symbols-outlined text-lg">arrow_back</span>
-              <span className="hidden sm:inline">Back</span>
-            </Link>
-            <Link
-              to="/organizer"
-              className="rounded-lg border border-border-green px-4 py-2 text-sm font-bold hover:bg-soft-green transition-colors"
-            >
-              Organizer Dashboard
-            </Link>
-          </nav>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-6 py-10 space-y-12">
-        <section className="grid gap-8 lg:grid-cols-2 lg:items-center">
-          <div className="space-y-5">
-            {ev.is_eco_friendly ? (
-              <EcoCertifiedBadge variant="default">Eco-friendly event</EcoCertifiedBadge>
-            ) : (
-              <span className="inline-flex rounded-full border border-border-green px-3 py-1 text-xs font-bold text-subtext-leaf">
-                Standard listing
-              </span>
-            )}
-            <h1 className="text-4xl md:text-5xl font-black leading-tight dark:text-white">{ev.title}</h1>
-            <p className="text-lg text-subtext-leaf whitespace-pre-wrap">{ev.description}</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <p className="rounded-xl bg-white dark:bg-white/5 border border-border-green px-4 py-3 text-sm font-semibold">
-                When: {formatEventWhen(ev)}
-              </p>
-              <p className="rounded-xl bg-white dark:bg-white/5 border border-border-green px-4 py-3 text-sm font-semibold">
-                {venueName}
-                {cityStr ? ` · ${cityStr}` : ""}
-              </p>
-              <p className="rounded-xl bg-white dark:bg-white/5 border border-border-green px-4 py-3 text-sm font-semibold sm:col-span-2">
-                Tickets from {priceLabel} · {ev.available_tickets} seats available
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                className="rounded-xl bg-primary px-6 py-3 font-black text-background-dark hover:brightness-95 transition-all"
+      <main className="max-w-7xl mx-auto px-6">
+        <section className="py-16 md:py-24 grid lg:grid-cols-2 gap-12 items-center">
+          <div className="flex flex-col gap-8">
+            <h1 className="text-5xl md:text-7xl font-black leading-[1.1] tracking-tight dark:text-white">
+              Organize Events, <span className="text-primary">Save the Planet</span>
+            </h1>
+            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-lg leading-relaxed">
+              The all-in-one digital workspace for eco-conscious event planners. Reduce waste, track impact, and create
+              unforgettable experiences that give back to nature.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              <Link
+                to="/signup"
+                className="bg-primary text-background-dark px-8 py-4 rounded-xl text-base font-bold hover:scale-[1.02] transition-transform shadow-lg shadow-primary/20"
               >
-                Get Tickets
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleShare()}
-                className="rounded-xl border border-border-green bg-white px-6 py-3 font-bold hover:bg-soft-green transition-colors"
-              >
-                Share Event
-              </button>
+                Get Started Free
+              </Link>
             </div>
           </div>
-          <div className="relative overflow-hidden rounded-2xl border border-border-green shadow-lg min-h-[280px]">
-            <img src={heroImg} alt={ev.title} className="h-full w-full object-cover min-h-[280px]" />
+          <div className="relative">
+            <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full" />
+            <div className="relative rounded-2xl overflow-hidden border-8 border-white dark:border-white/5 shadow-2xl aspect-[4/3]">
+              <img className="w-full h-full object-cover" alt="Lush green forest canopy – nature and environment" src={HERO_IMAGE} />
+            </div>
           </div>
         </section>
 
-        <section className="grid gap-8 lg:grid-cols-2">
-          <article className="rounded-2xl border border-border-green bg-white dark:bg-white/5 p-6 md:p-8">
-            <h2 className="text-2xl font-black dark:text-white">Sustainability</h2>
-            <p className="mt-2 text-subtext-leaf">
-              {ev.eco_summary?.trim() ||
-                "The organizer registered this event through EventLeaf. Eco attributes and venue certification inform the platform green badge."}
+        <section id="features" className="py-12 border-y border-border-green dark:border-white/10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {STATS.map(({ label, value, change }) => (
+              <div key={label} className="text-center md:text-left">
+                <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">{label}</p>
+                <p className="text-3xl font-black dark:text-white">
+                  {value} <span className="text-primary text-xl tracking-tight">{change}</span>
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="py-24">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-black mb-4 dark:text-white">Built for a Sustainable Future</h2>
+            <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              Our platform streamlines your workflow while minimizing your environmental footprint with industry-leading
+              green tools.
             </p>
-            <div className="mt-5">
-              <div className="flex items-center justify-between text-sm font-bold">
-                <span>Sustainability index</span>
-                <span>{score.toFixed(1)} / 5.0</span>
-              </div>
-              <div className="mt-2 h-2 rounded-full bg-neutral-bg dark:bg-white/10 overflow-hidden">
-                <div className="h-full bg-primary rounded-full" style={{ width: `${scorePercent}%` }} />
-              </div>
-            </div>
-            {landingCerts.length > 0 ? (
-              <div className="mt-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-subtext-leaf mb-2">Venue certifications</p>
-                <div className="flex flex-wrap gap-2">
-                  {landingCerts.map((c) => (
-                    <span
-                      key={c}
-                      className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-bold"
-                    >
-                      {c}
-                    </span>
-                  ))}
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {FEATURES.map(({ icon, title, description }) => (
+              <div
+                key={title}
+                className="group p-8 rounded-2xl bg-white dark:bg-white/5 border border-border-green dark:border-white/10 hover:border-primary transition-all hover:shadow-xl"
+              >
+                <div className="w-12 h-12 bg-soft-green dark:bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined font-bold">{icon}</span>
                 </div>
+                <h3 className="text-xl font-bold mb-3 dark:text-white">{title}</h3>
+                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">{description}</p>
               </div>
-            ) : null}
-            {landingProofs.length > 0 ? (
-              <div className="mt-5">
-                <p className="text-xs font-bold uppercase tracking-wide text-subtext-leaf mb-2">Sustainability flags</p>
-                <ul className="grid gap-2 sm:grid-cols-2">
-                  {landingProofs.map((p) => (
-                    <li key={p.title} className="flex gap-2 rounded-lg border border-border-green bg-background-light dark:bg-white/5 p-3">
-                      <span className="material-symbols-outlined text-primary shrink-0">{p.icon}</span>
-                      <div>
-                        <p className="text-sm font-bold dark:text-white">{p.title}</p>
-                        <p className="text-xs text-subtext-leaf mt-0.5">{p.detail}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-            <div className="mt-6 rounded-xl border border-border-green bg-background-light dark:bg-background-dark/40 p-4">
-              <p className="text-sm font-bold">Transparency</p>
-              <p className="mt-1 text-sm text-subtext-leaf">
-                Data is read live from the EventLeaf API. Full auth and audit trails can be layered on in production.
+            ))}
+          </div>
+        </section>
+
+        <section id="eco-impact" className="py-24">
+          <div className="bg-background-dark dark:bg-white/5 rounded-[2rem] p-8 md:p-16 text-center relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px]" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 blur-[100px]" />
+            <div className="relative z-10">
+              <h2 className="text-4xl md:text-5xl font-black text-white mb-6">
+                Ready to host your greenest event yet?
+              </h2>
+              <p className="text-gray-400 max-w-xl mx-auto mb-10 text-lg">
+                Join thousands of organizers making a positive impact. No credit card required to start your first 100
+                tickets.
               </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link
+                  to="/signup"
+                  className="bg-primary text-background-dark px-10 py-4 rounded-xl text-lg font-bold hover:scale-105 transition-transform text-center"
+                >
+                  Create Your Event
+                </Link>
+                <a
+                  href="#contact"
+                  className="bg-transparent border border-white/20 text-white px-10 py-4 rounded-xl text-lg font-bold hover:bg-white/10 transition-colors text-center"
+                >
+                  Contact Sales
+                </a>
+              </div>
             </div>
-          </article>
-          <div className="overflow-hidden rounded-2xl border border-border-green shadow-lg min-h-[240px]">
-            <img
-              src={venueHero}
-              alt={`${venueName} venue`}
-              className="h-full w-full object-cover min-h-[240px]"
-            />
           </div>
         </section>
       </main>
+
+      <footer className="bg-white dark:bg-background-dark border-t border-border-green dark:border-white/5 py-12">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-primary rounded flex items-center justify-center text-background-dark">
+                <span className="material-symbols-outlined text-xs font-bold">eco</span>
+              </div>
+              <h2 className="text-lg font-extrabold dark:text-white">EventLeaf</h2>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed max-w-md">
+              Making world-class event management sustainable, accessible, and digital-first.
+            </p>
+          </div>
+          <div className="flex gap-6">
+            <a className="text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-primary transition-colors" href="#about">
+              About us
+            </a>
+            <a className="text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-primary transition-colors" href="#contact">
+              Contact us
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
