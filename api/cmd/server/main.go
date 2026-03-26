@@ -46,7 +46,6 @@ func main() {
 	venueRepo := repository.NewVenueRepository(database)
 	ecoAttrRepo := repository.NewEcoAttributeRepository(database)
 	userRepo := repository.NewUserRepository(database)
-	eventHandler := handler.NewEventHandler(eventRepo, venueRepo, ecoAttrRepo)
 	googleCalendarRepo := repository.NewGoogleCalendarRepository(database)
 	googleCalendarSvc, err := service.NewGoogleCalendarService(
 		ctx,

@@ -18,6 +18,7 @@ import (
 type fakeEventRepo struct {
 	createFn func(ctx context.Context, req *models.CreateEventRequest, green bool) (*models.Event, error)
 	getFn    func(ctx context.Context, id uuid.UUID) (*models.Event, error)
+	listFn   func(ctx context.Context, limit, offset int) ([]models.Event, error)
 }
 
 func (f *fakeEventRepo) Create(ctx context.Context, req *models.CreateEventRequest, isEcoFriendly bool) (*models.Event, error) {
@@ -32,6 +33,13 @@ func (f *fakeEventRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.Even
 		return f.getFn(ctx, id)
 	}
 	return nil, pgx.ErrNoRows
+}
+
+func (f *fakeEventRepo) ListPublished(ctx context.Context, limit, offset int) ([]models.Event, error) {
+	if f.listFn != nil {
+		return f.listFn(ctx, limit, offset)
+	}
+	return []models.Event{}, nil
 }
 
 type fakeVenueRepo struct {
