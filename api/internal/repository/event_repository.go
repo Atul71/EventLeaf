@@ -18,6 +18,32 @@ func NewEventRepository(db *db.DB) *EventRepository {
 	return &EventRepository{db: db}
 }
 
+func (r *EventRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Event, error) {
+	var event models.Event
+	err := r.db.Pool.QueryRow(ctx,
+		`SELECT id, title, description, organizer_id, venue_id, event_date, event_start_time::text, event_end_time::text,
+			is_eco_friendly, eco_summary, ticket_price, total_capacity, available_tickets,
+			status, visibility, image_url, event_url, category, has_digital_ticketing, has_paperless_checkin,
+			created_at, updated_at
+		FROM events WHERE id = $1`,
+		id,
+	).Scan(
+		&event.ID, &event.Title, &event.Description, &event.OrganizerID, &event.VenueID,
+		&event.EventDate, &event.EventStartTime, &event.EventEndTime,
+		&event.IsEcoFriendly, &event.EcoSummary, &event.TicketPrice, &event.TotalCapacity, &event.AvailableTickets,
+		&event.Status, &event.Visibility, &event.ImageURL, &event.EventURL, &event.Category,
+		&event.HasDigitalTicketing, &event.HasPaperlessCheckin,
+		&event.CreatedAt, &event.UpdatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, pgx.ErrNoRows
+		}
+		return nil, err
+	}
+	return &event, nil
+}
+
 func (r *EventRepository) Create(ctx context.Context, req *models.CreateEventRequest, isEcoFriendly bool) (*models.Event, error) {
 	tx, err := r.db.Pool.Begin(ctx)
 	if err != nil {

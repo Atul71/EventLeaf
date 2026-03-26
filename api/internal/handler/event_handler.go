@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/Atul71/EventLeaf/api/internal/models"
-	"github.com/Atul71/EventLeaf/api/internal/repository"
 	"github.com/Atul71/EventLeaf/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -14,20 +13,26 @@ import (
 )
 
 type EventHandler struct {
-	eventRepo   *repository.EventRepository
-	venueRepo   *repository.VenueRepository
-	ecoAttrRepo *repository.EcoAttributeRepository
+	eventRepo        EventRepository
+	venueRepo        VenueRepository
+	ecoAttrRepo      EcoAttributeRepository
+	googleCalendar   CalendarPublisher
+	calendarTimeZone string
 }
 
 func NewEventHandler(
-	eventRepo *repository.EventRepository,
-	venueRepo *repository.VenueRepository,
-	ecoAttrRepo *repository.EcoAttributeRepository,
+	eventRepo EventRepository,
+	venueRepo VenueRepository,
+	ecoAttrRepo EcoAttributeRepository,
+	googleCalendar CalendarPublisher,
+	calendarTimeZone string,
 ) *EventHandler {
 	return &EventHandler{
-		eventRepo:   eventRepo,
-		venueRepo:   venueRepo,
-		ecoAttrRepo: ecoAttrRepo,
+		eventRepo:        eventRepo,
+		venueRepo:        venueRepo,
+		ecoAttrRepo:      ecoAttrRepo,
+		googleCalendar:   googleCalendar,
+		calendarTimeZone: calendarTimeZone,
 	}
 }
 
@@ -54,6 +59,7 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 
 	venueIsEcoCertified := true
 	venueIDProvided := req.VenueID != nil
+	var selectedVenue *models.Venue
 
 	if venueIDProvided {
 		venue, err := h.venueRepo.GetByID(ctx, *req.VenueID)
@@ -61,6 +67,7 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Venue not found"})
 			return
 		}
+		selectedVenue = venue
 		venueIsEcoCertified = venue.IsEcoCertified
 	}
 
@@ -82,12 +89,71 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, models.CreateEventResponse{
+	resp := models.CreateEventResponse{
 		Event:           *event,
 		IsGreen:         greenResult.IsGreen,
 		GreenCriteria:   greenResult.CriteriaMet,
 		NotGreenReasons: greenResult.CriteriaNotMet,
-	})
+		CalendarICSPath: "/api/v1/events/" + event.ID.String() + "/calendar.ics",
+	}
+
+	// Only published events are synced to Google Calendar.
+	if event.Status == "published" && h.googleCalendar != nil {
+		if err := h.googleCalendar.SyncPublishedEvent(ctx, event, selectedVenue); err != nil {
+			resp.CalendarSyncError = err.Error()
+		}
+	}
+
+	c.JSON(http.StatusCreated, resp)
+}
+
+// GetEventCalendarICS godoc
+// @Summary      Download event as iCalendar (.ics)
+// @Description  Returns an RFC 5545 ICS file for adding the event to Apple, Google, Outlook, etc.
+// @Tags         events
+// @Produce      text/calendar
+// @Param        id   path      string  true  "Event ID"
+// @Success      200  {string}  string  "ICS file"
+// @Failure      400  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /events/{id}/calendar.ics [get]
+func (h *EventHandler) GetEventCalendarICS(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	ctx := c.Request.Context()
+	event, err := h.eventRepo.GetByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load event: " + err.Error()})
+		return
+	}
+
+	var venue *models.Venue
+	if event.VenueID != nil {
+		v, err := h.venueRepo.GetByID(ctx, *event.VenueID)
+		if err == nil {
+			venue = v
+		}
+	}
+
+	body, err := service.BuildEventICS(event, venue, h.calendarTimeZone)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to build calendar file: " + err.Error()})
+		return
+	}
+
+	filename := "event-" + id.String() + ".ics"
+	c.Header("Content-Type", "text/calendar; charset=utf-8")
+	c.Header("Content-Disposition", `attachment; filename="`+filename+`"`)
+	c.Data(http.StatusOK, "text/calendar; charset=utf-8", body)
 }
 
 // ListEvents godoc

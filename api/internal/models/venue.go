@@ -54,22 +54,22 @@ type CreateVenueRequest struct {
 }
 
 type UpdateVenueRequest struct {
-	Name                    *string   `json:"name" binding:"omitempty,max=255"`
-	Description             *string   `json:"description"`
-	Address                 *string   `json:"address" binding:"omitempty,max=500"`
-	City                    *string   `json:"city" binding:"omitempty,max=100"`
-	State                   *string   `json:"state" binding:"omitempty,max=2"`
-	ZipCode                 *string   `json:"zip_code" binding:"omitempty,max=10"`
-	Country                 *string   `json:"country" binding:"omitempty,max=100"`
-	Latitude                *float64  `json:"latitude"`
-	Longitude               *float64  `json:"longitude"`
-	Capacity                *int      `json:"capacity" binding:"omitempty,gt=0"`
-	ContactEmail            *string   `json:"contact_email" binding:"omitempty,email"`
-	ContactPhone            *string   `json:"contact_phone" binding:"omitempty,max=20"`
-	WebsiteURL              *string   `json:"website_url" binding:"omitempty,url"`
-	IsEcoCertified          *bool     `json:"is_eco_certified"`
-	EcoCertifications       []string  `json:"eco_certifications"`
-	HasPublicTransit        *bool     `json:"has_public_transit"`
-	HasParking              *bool     `json:"has_parking"`
-	HasAccessibleFacilities *bool     `json:"has_accessible_facilities"`
+	Name                    *string  `json:"name" binding:"omitempty,max=255"`
+	Description             *string  `json:"description"`
+	Address                 *string  `json:"address" binding:"omitempty,max=500"`
+	City                    *string  `json:"city" binding:"omitempty,max=100"`
+	State                   *string  `json:"state" binding:"omitempty,max=2"`
+	ZipCode                 *string  `json:"zip_code" binding:"omitempty,max=10"`
+	Country                 *string  `json:"country" binding:"omitempty,max=100"`
+	Latitude                *float64 `json:"latitude"`
+	Longitude               *float64 `json:"longitude"`
+	Capacity                *int     `json:"capacity" binding:"omitempty,gt=0"`
+	ContactEmail            *string  `json:"contact_email" binding:"omitempty,email"`
+	ContactPhone            *string  `json:"contact_phone" binding:"omitempty,max=20"`
+	WebsiteURL              *string  `json:"website_url" binding:"omitempty,url"`
+	IsEcoCertified          *bool    `json:"is_eco_certified"`
+	EcoCertifications       []string `json:"eco_certifications"`
+	HasPublicTransit        *bool    `json:"has_public_transit"`
+	HasParking              *bool    `json:"has_parking"`
+	HasAccessibleFacilities *bool    `json:"has_accessible_facilities"`
 }
