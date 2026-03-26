@@ -1,11 +1,15 @@
-import type { Be102Venue } from "../../../mocks/be102Venues";
+/** Minimal venue shape for eco scoring (API venues or legacy mocks). */
+export type WizardVenueLike = {
+  isGreenAuditorium?: boolean;
+  isEcoCertified: boolean;
+};
 
 export type WizardDraft = {
   eventName: string;
   category: string;
   description: string;
   hasBanner: boolean;
-  venue: Be102Venue | null;
+  venue: WizardVenueLike | null;
   digitalOnlyTicketing: boolean;
   zeroWasteCatering: boolean;
   onSiteRecycling: boolean;

@@ -2,9 +2,12 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/Atul71/EventLeaf/api/internal/db"
 	"github.com/Atul71/EventLeaf/api/internal/models"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type EventRepository struct {
@@ -21,6 +24,42 @@ func (r *EventRepository) Create(ctx context.Context, req *models.CreateEventReq
 		return nil, err
 	}
 	defer tx.Rollback(ctx)
+
+	// Ticketing / check-in booleans are derived from which eco attributes were selected.
+	// Frontend passes `eco_attribute_ids` that correspond to:
+	// - "Paperless Ticketing"
+	// - "Digital Check-in"
+	hasDigitalTicketing := false
+	hasPaperlessCheckin := false
+
+	if len(req.EcoAttributeIDs) > 0 {
+		rows, qerr := tx.Query(ctx,
+			`SELECT name
+			 FROM eco_attributes
+			 WHERE id = ANY($1)`,
+			req.EcoAttributeIDs,
+		)
+		if qerr != nil {
+			return nil, qerr
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var name string
+			if err := rows.Scan(&name); err != nil {
+				return nil, err
+			}
+			switch name {
+			case "Paperless Ticketing":
+				hasDigitalTicketing = true
+			case "Digital Check-in":
+				hasPaperlessCheckin = true
+			}
+		}
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+	}
 
 	var venueID interface{}
 	if req.VenueID != nil {
@@ -47,7 +86,7 @@ func (r *EventRepository) Create(ctx context.Context, req *models.CreateEventReq
 			title, description, organizer_id, venue_id, event_date, event_start_time, event_end_time,
 			is_eco_friendly, eco_summary, ticket_price, total_capacity, available_tickets,
 			status, visibility, category, has_digital_ticketing, has_paperless_checkin
-		) VALUES ($1, $2, $3, $4, $5::date, $6::time, $7::time, $8, $9, $10, $11, $12, $13, $14, NULLIF($15,''), true, true)
+		) VALUES ($1, $2, $3, $4, $5::date, $6::time, $7::time, $8, $9, $10, $11, $12, $13, $14, NULLIF($15,''), $16, $17)
 		RETURNING id, title, description, organizer_id, venue_id, event_date, event_start_time::text, event_end_time::text,
 			is_eco_friendly, eco_summary, ticket_price, total_capacity, available_tickets,
 			status, visibility, image_url, event_url, category, has_digital_ticketing, has_paperless_checkin,
@@ -56,6 +95,7 @@ func (r *EventRepository) Create(ctx context.Context, req *models.CreateEventReq
 		req.EventDate, req.EventStartTime, req.EventEndTime,
 		isEcoFriendly, ecoSummary, req.TicketPrice, req.TotalCapacity, req.TotalCapacity,
 		status, visibility, emptyToNull(req.Category),
+		hasDigitalTicketing, hasPaperlessCheckin,
 	).Scan(
 		&event.ID, &event.Title, &event.Description, &event.OrganizerID, &event.VenueID,
 		&event.EventDate, &event.EventStartTime, &event.EventEndTime,
@@ -83,6 +123,103 @@ func (r *EventRepository) Create(ctx context.Context, req *models.CreateEventReq
 	}
 
 	return &event, nil
+}
+
+const eventJoinSelect = `e.id, e.title, e.description, e.organizer_id, e.venue_id, e.event_date,
+	e.event_start_time::text, e.event_end_time::text, e.is_eco_friendly, e.eco_summary,
+	e.ticket_price, e.total_capacity, e.available_tickets, e.status, e.visibility,
+	e.image_url, e.event_url, e.category, e.has_digital_ticketing, e.has_paperless_checkin,
+	e.created_at, e.updated_at, v.name, v.city, v.eco_certifications,
+	v.has_public_transit,
+	COALESCE((
+		SELECT array_agg(ea.name ORDER BY ea.name)
+		FROM event_eco_attributes eea
+		JOIN eco_attributes ea ON ea.id = eea.eco_attribute_id
+		WHERE eea.event_id = e.id
+	), ARRAY[]::text[])`
+
+func scanEventJoined(row pgx.Row) (*models.Event, error) {
+	var e models.Event
+	var vName, vCity sql.NullString
+	var venueCerts []string
+	var ecoNames []string
+	var hasPublicTransit sql.NullBool
+	err := row.Scan(
+		&e.ID, &e.Title, &e.Description, &e.OrganizerID, &e.VenueID,
+		&e.EventDate, &e.EventStartTime, &e.EventEndTime,
+		&e.IsEcoFriendly, &e.EcoSummary, &e.TicketPrice, &e.TotalCapacity, &e.AvailableTickets,
+		&e.Status, &e.Visibility, &e.ImageURL, &e.EventURL, &e.Category,
+		&e.HasDigitalTicketing, &e.HasPaperlessCheckin,
+		&e.CreatedAt, &e.UpdatedAt,
+		&vName, &vCity,
+		&venueCerts,
+		&hasPublicTransit,
+		&ecoNames,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if vName.Valid {
+		s := vName.String
+		e.VenueName = &s
+	}
+	if vCity.Valid {
+		s := vCity.String
+		e.VenueCity = &s
+	}
+	if len(venueCerts) > 0 {
+		e.VenueEcoCertifications = venueCerts
+	}
+	if len(ecoNames) > 0 {
+		e.EcoAttributeNames = ecoNames
+	}
+	// venues.has_public_transit is safe to default to false when the join misses (NULL → false).
+	if hasPublicTransit.Valid {
+		e.HasPublicTransit = hasPublicTransit.Bool
+	}
+	return &e, nil
+}
+
+// ListPublished returns public published events with optional venue name/city (newest first by date).
+func (r *EventRepository) ListPublished(ctx context.Context, limit, offset int) ([]models.Event, error) {
+	rows, err := r.db.Pool.Query(ctx,
+		`SELECT `+eventJoinSelect+`
+		FROM events e
+		LEFT JOIN venues v ON v.id = e.venue_id
+		WHERE e.status = 'published' AND e.visibility = 'public'
+		ORDER BY e.event_date ASC, e.event_start_time ASC NULLS LAST
+		LIMIT $1 OFFSET $2`,
+		limit, offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []models.Event
+	for rows.Next() {
+		ev, err := scanEventJoined(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *ev)
+	}
+	return out, rows.Err()
+}
+
+// GetByID returns one event with optional venue name/city.
+func (r *EventRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Event, error) {
+	ev, err := scanEventJoined(r.db.Pool.QueryRow(ctx,
+		`SELECT `+eventJoinSelect+`
+		FROM events e
+		LEFT JOIN venues v ON v.id = e.venue_id
+		WHERE e.id = $1`,
+		id,
+	))
+	if err != nil {
+		return nil, err
+	}
+	return ev, nil
 }
 
 func emptyToNull(s string) interface{} {
