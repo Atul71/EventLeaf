@@ -10,6 +10,8 @@ import (
 // EventRepository is the subset of event persistence used by HTTP handlers.
 type EventRepository interface {
 	Create(ctx context.Context, req *models.CreateEventRequest, isEcoFriendly bool) (*models.Event, error)
+	// ListPublished returns public + published events for the Discover UI.
+	ListPublished(ctx context.Context, limit, offset int) ([]models.Event, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*models.Event, error)
 }
 
