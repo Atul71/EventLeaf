@@ -1,14 +1,83 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { OrganizerSidebar } from "../components/organizer/OrganizerSidebar";
 import { EcoCertifiedBadge } from "../components/organizer/EcoCertifiedBadge";
-import { searchBe102Venues } from "../api/mockVenueSearchApi";
-import { getBe102VenueById, type Be102Venue } from "../mocks/be102Venues";
+import {
+  createEvent,
+  fetchDemoOrganizerId,
+  fetchEcoAttributes,
+  fetchVenues,
+  normalizeTimeForApi,
+  type ApiEcoAttribute,
+  type ApiVenue,
+} from "../api/eventleafApi";
 import {
   computeEcoScore,
   getEcoBadgePreviews,
   type WizardDraft,
+  type WizardVenueLike,
 } from "../components/organizer/create-event/ecoScorePreview";
+import { venueImageUrlFromKey } from "../data/discoverPresentation";
+
+type WizardSelectedVenue = WizardVenueLike & {
+  id: string;
+  name: string;
+  location: string;
+  imageUrl: string;
+  certifications: string[];
+};
+
+function mapApiVenueToWizard(v: ApiVenue): WizardSelectedVenue {
+  const state = v.state?.trim() || "";
+  const location = state ? `${v.city}, ${state}` : v.city;
+  return {
+    id: v.id,
+    name: v.name,
+    location,
+    imageUrl: venueImageUrlFromKey(`${v.id}|${v.city}|${v.name}`),
+    isEcoCertified: v.is_eco_certified,
+    isGreenAuditorium: false,
+    certifications: v.eco_certifications ?? [],
+  };
+}
+
+function buildEcoAttributeIds(
+  attrs: ApiEcoAttribute[],
+  toggles: {
+    digitalOnlyTicketing: boolean;
+    zeroWasteCatering: boolean;
+    onSiteRecycling: boolean;
+    publicTransportIncentives: boolean;
+  }
+): string[] {
+  const byName = new Map(attrs.map((a) => [a.name, a.id]));
+  const want = new Set<string>();
+  if (toggles.digitalOnlyTicketing) {
+    const a = byName.get("Paperless Ticketing");
+    const b = byName.get("Digital Check-in");
+    if (a) want.add(a);
+    if (b) want.add(b);
+  }
+  if (toggles.zeroWasteCatering) {
+    const a = byName.get("Waste Reduction Program");
+    if (a) want.add(a);
+  }
+  if (toggles.onSiteRecycling) {
+    const a = byName.get("Zero Single-Use Plastics");
+    if (a) want.add(a);
+  }
+  if (toggles.publicTransportIncentives) {
+    const a = byName.get("Carbon Neutral Transport");
+    if (a) want.add(a);
+  }
+  return [...want];
+}
+
+function tomorrowISODate(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
 
 const EVENT_CATEGORIES = ["Music", "Conference", "Workshop", "Festival", "Sports", "Community", "Other"] as const;
 
@@ -71,11 +140,21 @@ export function CreateEventWizardPage() {
   const [description, setDescription] = useState("");
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string | null>(null);
-  const [venue, setVenue] = useState<Be102Venue | null>(null);
+  const [venue, setVenue] = useState<WizardSelectedVenue | null>(null);
   const [venueQuery, setVenueQuery] = useState("");
-  const [venueResults, setVenueResults] = useState<Be102Venue[]>([]);
+  const [allVenues, setAllVenues] = useState<ApiVenue[]>([]);
+  const [ecoAttributes, setEcoAttributes] = useState<ApiEcoAttribute[]>([]);
+  const [organizerId, setOrganizerId] = useState<string | null>(null);
+  const [apiLoadError, setApiLoadError] = useState<string | null>(null);
+  const [apiLoading, setApiLoading] = useState(true);
+  const [eventDate, setEventDate] = useState(tomorrowISODate);
+  const [eventStartTime, setEventStartTime] = useState("10:00");
+  const [eventEndTime, setEventEndTime] = useState("18:00");
+  const [ticketPrice, setTicketPrice] = useState(0);
+  const [totalCapacity, setTotalCapacity] = useState(100);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [venueOpen, setVenueOpen] = useState(false);
-  const [venueLoading, setVenueLoading] = useState(false);
   const [digitalOnlyTicketing, setDigitalOnlyTicketing] = useState(true);
   const [zeroWasteCatering, setZeroWasteCatering] = useState(false);
   const [onSiteRecycling, setOnSiteRecycling] = useState(false);
@@ -83,18 +162,38 @@ export function CreateEventWizardPage() {
 
   const mainRef = useRef<HTMLElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setApiLoading(true);
+    setApiLoadError(null);
+    Promise.all([fetchDemoOrganizerId(), fetchVenues(100), fetchEcoAttributes()])
+      .then(([orgId, venues, eco]) => {
+        if (cancelled) return;
+        setOrganizerId(orgId);
+        setAllVenues(venues);
+        setEcoAttributes(eco);
+      })
+      .catch((e: Error) => {
+        if (!cancelled) setApiLoadError(e.message || "Could not load API data");
+      })
+      .finally(() => {
+        if (!cancelled) setApiLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const id = state?.preselectedVenueId ?? state?.selectedVenue?.id;
-    if (id) {
-      const v = getBe102VenueById(id);
-      if (v) {
-        setVenue(v);
-        setVenueQuery(v.name);
-      }
+    if (!id || allVenues.length === 0) return;
+    const match = allVenues.find((v) => v.id === id);
+    if (match) {
+      const w = mapApiVenueToWizard(match);
+      setVenue(w);
+      setVenueQuery(w.name);
     }
-  }, [state?.preselectedVenueId, state?.selectedVenue?.id]);
+  }, [state?.preselectedVenueId, state?.selectedVenue?.id, allVenues]);
 
   useEffect(() => {
     return () => {
@@ -102,20 +201,18 @@ export function CreateEventWizardPage() {
     };
   }, [bannerPreviewUrl]);
 
-  const runVenueSearch = useCallback((q: string) => {
-    setVenueLoading(true);
-    searchBe102Venues(q)
-      .then(setVenueResults)
-      .finally(() => setVenueLoading(false));
-  }, []);
-
-  useEffect(() => {
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => runVenueSearch(venueQuery), 200);
-    return () => {
-      if (searchTimer.current) clearTimeout(searchTimer.current);
-    };
-  }, [venueQuery, runVenueSearch]);
+  const venueResults = useMemo(() => {
+    const q = venueQuery.trim().toLowerCase();
+    if (!q) return allVenues.slice(0, 24);
+    return allVenues
+      .filter(
+        (v) =>
+          v.name.toLowerCase().includes(q) ||
+          v.city.toLowerCase().includes(q) ||
+          (v.state && v.state.toLowerCase().includes(q))
+      )
+      .slice(0, 40);
+  }, [allVenues, venueQuery]);
 
   useEffect(() => {
     if (!venueOpen) return;
@@ -181,12 +278,19 @@ export function CreateEventWizardPage() {
     });
   }
 
+  const step1Complete =
+    eventName.trim().length > 0 &&
+    category.length > 0 &&
+    description.trim().length > 0 &&
+    !!organizerId &&
+    !!eventDate &&
+    eventStartTime.trim().length > 0 &&
+    eventEndTime.trim().length > 0 &&
+    totalCapacity > 0 &&
+    ticketPrice >= 0;
+
   const canGoNext =
-    step === 1
-      ? eventName.trim().length > 0 && category.length > 0 && description.trim().length > 0
-      : step === 2
-        ? venue != null
-        : true;
+    step === 1 ? step1Complete : step === 2 ? venue != null : true;
 
   function goNext() {
     if (step >= 4) return;
@@ -200,6 +304,50 @@ export function CreateEventWizardPage() {
   function goBack() {
     if (step > 1) setStep((s) => s - 1);
   }
+
+  async function publishEvent() {
+    if (!organizerId || !venue) {
+      setSubmitError("Missing organizer or venue.");
+      return;
+    }
+    setSubmitError(null);
+    setSubmitting(true);
+    try {
+      const ecoIds = buildEcoAttributeIds(ecoAttributes, {
+        digitalOnlyTicketing,
+        zeroWasteCatering,
+        onSiteRecycling,
+        publicTransportIncentives,
+      });
+      const ecoSummary =
+        description.trim().slice(0, 800) ||
+        "Event created with EventLeaf sustainability checklist.";
+
+      const res = await createEvent({
+        title: eventName.trim(),
+        description: description.trim(),
+        organizer_id: organizerId,
+        venue_id: venue.id,
+        event_date: eventDate,
+        event_start_time: normalizeTimeForApi(eventStartTime),
+        event_end_time: normalizeTimeForApi(eventEndTime),
+        eco_summary: ecoSummary,
+        ticket_price: ticketPrice,
+        total_capacity: totalCapacity,
+        status: "published",
+        visibility: "public",
+        category,
+        eco_attribute_ids: ecoIds,
+      });
+      navigate(`/events/${res.event.id}`, { state: { created: true, isGreen: res.is_green } });
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : "Could not publish event");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const canPublish = step1Complete && venue != null;
 
   return (
     <div className="flex min-h-screen bg-background-light dark:bg-background-dark text-text-leaf">
@@ -262,6 +410,19 @@ export function CreateEventWizardPage() {
                   <h2 className="text-xl font-black text-text-leaf dark:text-white">Core event details</h2>
                   <p className="text-sm text-subtext-leaf mt-1">Basics attendees see first on your public page.</p>
                 </div>
+                {apiLoading && (
+                  <p className="text-sm font-semibold text-subtext-leaf">Connecting to EventLeaf API (organizer, venues)…</p>
+                )}
+                {apiLoadError && (
+                  <div
+                    className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-950 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
+                    role="alert"
+                  >
+                    <strong className="font-bold">API error:</strong> {apiLoadError}. Run the API on{" "}
+                    <code className="rounded bg-black/5 px-1">localhost:3000</code> with a seeded database; Vite proxies{" "}
+                    <code className="rounded bg-black/5 px-1">/api</code> to it.
+                  </div>
+                )}
                 <div>
                   <label htmlFor="evt-name" className="block text-xs font-bold uppercase tracking-wide text-subtext-leaf mb-1">
                     Event name
@@ -303,6 +464,64 @@ export function CreateEventWizardPage() {
                     className="w-full rounded-xl border border-border-green dark:border-white/10 bg-background-light dark:bg-white/5 px-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 resize-y min-h-[120px]"
                     placeholder="What makes this event special? Mention sustainability themes if you like."
                   />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label htmlFor="evt-date" className="block text-xs font-bold uppercase tracking-wide text-subtext-leaf">
+                    Event date
+                    <input
+                      id="evt-date"
+                      type="date"
+                      value={eventDate}
+                      onChange={(e) => setEventDate(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-border-green dark:border-white/10 bg-background-light dark:bg-white/5 px-4 py-3 text-sm font-semibold focus:ring-2 focus:ring-primary/50"
+                    />
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label htmlFor="evt-start" className="block text-xs font-bold uppercase tracking-wide text-subtext-leaf">
+                      Start
+                      <input
+                        id="evt-start"
+                        type="time"
+                        value={eventStartTime}
+                        onChange={(e) => setEventStartTime(e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-border-green dark:border-white/10 bg-background-light dark:bg-white/5 px-3 py-3 text-sm font-semibold focus:ring-2 focus:ring-primary/50"
+                      />
+                    </label>
+                    <label htmlFor="evt-end" className="block text-xs font-bold uppercase tracking-wide text-subtext-leaf">
+                      End
+                      <input
+                        id="evt-end"
+                        type="time"
+                        value={eventEndTime}
+                        onChange={(e) => setEventEndTime(e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-border-green dark:border-white/10 bg-background-light dark:bg-white/5 px-3 py-3 text-sm font-semibold focus:ring-2 focus:ring-primary/50"
+                      />
+                    </label>
+                  </div>
+                  <label htmlFor="evt-price" className="block text-xs font-bold uppercase tracking-wide text-subtext-leaf">
+                    Ticket price (USD)
+                    <input
+                      id="evt-price"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={ticketPrice}
+                      onChange={(e) => setTicketPrice(Number(e.target.value))}
+                      className="mt-1 w-full rounded-xl border border-border-green dark:border-white/10 bg-background-light dark:bg-white/5 px-4 py-3 text-sm font-semibold focus:ring-2 focus:ring-primary/50"
+                    />
+                  </label>
+                  <label htmlFor="evt-cap" className="block text-xs font-bold uppercase tracking-wide text-subtext-leaf">
+                    Total capacity
+                    <input
+                      id="evt-cap"
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={totalCapacity}
+                      onChange={(e) => setTotalCapacity(Number(e.target.value))}
+                      className="mt-1 w-full rounded-xl border border-border-green dark:border-white/10 bg-background-light dark:bg-white/5 px-4 py-3 text-sm font-semibold focus:ring-2 focus:ring-primary/50"
+                    />
+                  </label>
                 </div>
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-subtext-leaf mb-2">Banner / thumbnail</p>
@@ -381,8 +600,8 @@ export function CreateEventWizardPage() {
                 <div>
                   <h2 className="text-xl font-black text-text-leaf dark:text-white">Venue selection</h2>
                   <p className="text-sm text-subtext-leaf mt-1">
-                    Search the <span className="font-semibold text-text-leaf dark:text-white">BE-102</span> venue database (mock
-                    API). Green auditoriums unlock instant certification readouts.
+                    Choose a venue from your <span className="font-semibold text-text-leaf dark:text-white">EventLeaf</span>{" "}
+                    database. Eco-certified venues help your event meet green criteria.
                   </p>
                 </div>
 
@@ -407,8 +626,8 @@ export function CreateEventWizardPage() {
                       aria-controls="venue-listbox"
                       aria-autocomplete="list"
                     />
-                    {venueLoading && (
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-subtext-leaf">Searching…</span>
+                    {apiLoading && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-subtext-leaf">Loading…</span>
                     )}
                   </div>
                   {venueOpen && (
@@ -417,28 +636,35 @@ export function CreateEventWizardPage() {
                       role="listbox"
                       className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-border-green bg-white py-1 shadow-lg dark:bg-[#1a2e1c] dark:border-white/10"
                     >
-                      {venueResults.map((v) => (
-                        <li key={v.id} role="option" aria-selected={venue?.id === v.id}>
-                          <button
-                            type="button"
-                            className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm hover:bg-soft-green dark:hover:bg-white/10"
-                            onClick={() => {
-                              setVenue(v);
-                              setVenueQuery(v.name);
-                              setVenueOpen(false);
-                            }}
-                          >
-                            <img src={v.imageUrl} alt="" className="size-10 rounded-lg object-cover shrink-0" />
-                            <div className="min-w-0 flex-1">
-                              <p className="font-bold truncate text-text-leaf dark:text-white">{v.name}</p>
-                              <p className="text-xs text-subtext-leaf truncate">{v.location}</p>
-                            </div>
-                            {v.isEcoCertified && <EcoCertifiedBadge variant="compact">Green</EcoCertifiedBadge>}
-                          </button>
+                      {venueResults.map((v) => {
+                        const w = mapApiVenueToWizard(v);
+                        return (
+                          <li key={v.id} role="option" aria-selected={venue?.id === v.id}>
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm hover:bg-soft-green dark:hover:bg-white/10"
+                              onClick={() => {
+                                setVenue(w);
+                                setVenueQuery(w.name);
+                                setVenueOpen(false);
+                              }}
+                            >
+                              <img src={w.imageUrl} alt="" className="size-10 rounded-lg object-cover shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <p className="font-bold truncate text-text-leaf dark:text-white">{v.name}</p>
+                                <p className="text-xs text-subtext-leaf truncate">{w.location}</p>
+                              </div>
+                              {v.is_eco_certified && <EcoCertifiedBadge variant="compact">Green</EcoCertifiedBadge>}
+                            </button>
+                          </li>
+                        );
+                      })}
+                      {venueResults.length === 0 && !apiLoading && (
+                        <li className="px-3 py-4 text-sm text-subtext-leaf text-center">
+                          {allVenues.length === 0
+                            ? "No venues in the database yet. Seed venues or create one via the API."
+                            : "No venues match that search."}
                         </li>
-                      ))}
-                      {venueResults.length === 0 && !venueLoading && (
-                        <li className="px-3 py-4 text-sm text-subtext-leaf text-center">No venues match that search.</li>
                       )}
                     </ul>
                   )}
@@ -641,6 +867,14 @@ export function CreateEventWizardPage() {
                   </ul>
                 </div>
 
+                {submitError && (
+                  <div
+                    className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-950 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
+                    role="alert"
+                  >
+                    {submitError}
+                  </div>
+                )}
                 <div className="rounded-xl border border-border-green bg-soft-green/30 dark:bg-white/5 p-4 text-sm text-subtext-leaf">
                   <strong className="text-text-leaf dark:text-white">Summary:</strong> {eventName || "Untitled"} · {category}
                   {venue && ` · ${venue.name}`}
@@ -673,10 +907,11 @@ export function CreateEventWizardPage() {
               ) : (
                 <button
                   type="button"
-                  onClick={() => navigate("/organizer", { state: { eventDraftSaved: true } })}
-                  className="rounded-xl bg-text-leaf px-6 py-2.5 text-sm font-black text-white dark:bg-white dark:text-text-leaf hover:opacity-90"
+                  disabled={!canPublish || submitting}
+                  onClick={() => void publishEvent()}
+                  className="rounded-xl bg-text-leaf px-6 py-2.5 text-sm font-black text-white dark:bg-white dark:text-text-leaf hover:opacity-90 disabled:opacity-40"
                 >
-                  Save draft (mock)
+                  {submitting ? "Publishing…" : "Publish event"}
                 </button>
               )}
             </div>

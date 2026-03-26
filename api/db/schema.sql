@@ -254,4 +254,5 @@ INSERT INTO eco_attributes (name, category, description) VALUES
     ('Water Conservation', 'sustainability_practice', 'Water-efficient practices at venue'),
     ('Zero Single-Use Plastics', 'sustainability_practice', 'No single-use plastic items at event'),
     ('Tree Planting Offset', 'sustainability_practice', 'Event contributes to tree planting initiatives'),
-    ('Accessibility Features', 'venue_feature', 'ADA compliant facilities and services');
+    ('Accessibility Features', 'venue_feature', 'ADA compliant facilities and services')
+ON CONFLICT (name) DO NOTHING;

@@ -9,12 +9,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "cy:open": "cypress open",
-    "cy:open:with-server": "start-server-and-test dev:e2e http://localhost:5173 cy:open",
-    "cy:run": "cypress run",
-    "e2e": "start-server-and-test dev:e2e http://localhost:5173 cy:run"
+    "cypress:run": "cypress run",
+    "cypress:open": "cypress open"
   },
   "dependencies": {
     "react": "^19.2.0",
