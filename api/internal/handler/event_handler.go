@@ -1,12 +1,16 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/Atul71/EventLeaf/api/internal/models"
 	"github.com/Atul71/EventLeaf/api/internal/repository"
 	"github.com/Atul71/EventLeaf/api/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type EventHandler struct {
@@ -84,6 +88,62 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 		GreenCriteria:   greenResult.CriteriaMet,
 		NotGreenReasons: greenResult.CriteriaNotMet,
 	})
+}
+
+// ListEvents godoc
+// @Summary      List published public events
+// @Tags         events
+// @Produce      json
+// @Param        limit   query  int  false  "Limit (default 50, max 100)"
+// @Param        offset  query  int  false  "Offset (default 0)"
+// @Success      200  {array}   models.Event
+// @Failure      500  {object}  map[string]string
+// @Router       /events [get]
+func (h *EventHandler) ListEvents(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if limit < 1 || limit > 100 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	events, err := h.eventRepo.ListPublished(c.Request.Context(), limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch events: " + err.Error()})
+		return
+	}
+	if events == nil {
+		events = []models.Event{}
+	}
+	c.JSON(http.StatusOK, events)
+}
+
+// GetEvent godoc
+// @Summary      Get event by id
+// @Tags         events
+// @Produce      json
+// @Param        id   path  string  true  "Event UUID"
+// @Success      200  {object}  models.Event
+// @Failure      400  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Router       /events/{id} [get]
+func (h *EventHandler) GetEvent(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event id"})
+		return
+	}
+	event, err := h.eventRepo.GetByID(c.Request.Context(), id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch event"})
+		return
+	}
+	c.JSON(http.StatusOK, event)
 }
 
 // ListEcoAttributes godoc

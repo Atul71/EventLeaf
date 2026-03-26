@@ -44,8 +44,10 @@ func main() {
 	eventRepo := repository.NewEventRepository(database)
 	venueRepo := repository.NewVenueRepository(database)
 	ecoAttrRepo := repository.NewEcoAttributeRepository(database)
+	userRepo := repository.NewUserRepository(database)
 	eventHandler := handler.NewEventHandler(eventRepo, venueRepo, ecoAttrRepo)
 	venueHandler := handler.NewVenueHandler(venueRepo)
+	bootstrapHandler := handler.NewBootstrapHandler(userRepo)
 
 	router := gin.Default()
 	router.GET("/health", func(c *gin.Context) {
@@ -57,8 +59,11 @@ func main() {
 
 	v1 := router.Group("/api/v1")
 	{
+		v1.GET("/events", eventHandler.ListEvents)
+		v1.GET("/events/:id", eventHandler.GetEvent)
 		v1.POST("/events", eventHandler.CreateEvent)
 		v1.GET("/eco-attributes", eventHandler.ListEcoAttributes)
+		v1.GET("/bootstrap/organizer-id", bootstrapHandler.DemoOrganizerID)
 
 		// Venue CRUD endpoints
 		v1.POST("/venues", venueHandler.CreateVenue)
