@@ -1,5 +1,6 @@
 describe("Discover Events", () => {
   const now = new Date();
+  const SHOW_DELAY_MS = 750;
 
   function isoLocalDate(daysFromNow) {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysFromNow);
@@ -12,7 +13,7 @@ describe("Discover Events", () => {
   const events = [
     {
       id: "11111111-1111-1111-1111-111111111111",
-      title: "Event in next 7 (A)",
+      title: "Tomorrow Land Green Expo",
       description: "Test event A",
       organizer_id: "o1",
       venue_id: null,
@@ -109,15 +110,25 @@ describe("Discover Events", () => {
     }).as("getEventById");
 
     cy.visit("/events");
+    cy.wait(SHOW_DELAY_MS);
 
     cy.get('a:contains("View Event")').should("have.length", 3);
+    cy.wait(SHOW_DELAY_MS);
 
     // Set date filter to "Next 7 days"
     cy.contains("label", "Date").find("select").select("next7");
+    cy.wait(SHOW_DELAY_MS);
     cy.get('a:contains("View Event")').should("have.length", 2);
+    cy.wait(SHOW_DELAY_MS);
+
+    // Search for an event by title
+    cy.get('input[aria-label="Search Events"]').clear().type("tomorrow land");
+    cy.wait(SHOW_DELAY_MS);
+    cy.get('a:contains("View Event")').should("have.length", 1);
 
     // Open first event
     cy.get('a:contains("View Event")').first().click();
+    cy.wait(SHOW_DELAY_MS);
 
     // Verify back link exists
     cy.contains("a", "Back").should("have.attr", "href", "/events");

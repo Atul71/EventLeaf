@@ -79,7 +79,7 @@ function tomorrowISODate(): string {
   return d.toISOString().slice(0, 10);
 }
 
-const EVENT_CATEGORIES = ["Music", "Conference", "Workshop", "Festival", "Sports", "Community", "Other"] as const;
+const EVENT_CATEGORIES = ["Music", "Conference", "Workshop", "Festival", "Sports", "Community", "Food", "Other"] as const;
 
 const STEPS = [
   { id: 1, title: "Core details", subtitle: "Name, category, story, media" },
