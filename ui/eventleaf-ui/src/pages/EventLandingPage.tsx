@@ -5,7 +5,6 @@ import { EcoCertifiedBadge } from "../components/organizer/EcoCertifiedBadge";
 import { fetchEventById, type ApiEvent } from "../api/eventleafApi";
 import {
   certificationsFromApi,
-  compactAgenda,
   ecoProofsFromApi,
   sustainabilityScoreFromApi,
   venueImageUrlForEvent,
@@ -167,7 +166,6 @@ export function EventLandingPage() {
   const hasDigitalTicketing = Boolean(ev.has_digital_ticketing);
   const hasPaperlessCheckin = Boolean(ev.has_paperless_checkin);
   const hasPublicTransit = Boolean(ev.has_public_transit);
-  const agenda = compactAgenda(ev);
   const scorePercent = Math.round((score / 5) * 100);
   const priceLabel = ev.ticket_price <= 0 ? "Free" : `$${ev.ticket_price.toFixed(2)}`;
   const ecoAttrNames = ev.eco_attribute_names ?? [];
@@ -386,23 +384,7 @@ export function EventLandingPage() {
           </div>
         </section>
 
-        <section className="grid gap-8 lg:grid-cols-2 lg:items-start">
-          <article className="rounded-2xl border border-border-green bg-white dark:bg-white/5 p-6 md:p-8">
-            <h2 className="text-2xl font-black dark:text-white">Agenda highlights</h2>
-            <p className="mt-2 text-subtext-leaf">
-              A quick look at how the day typically flows for this event.
-            </p>
-
-            <ul className="mt-5 space-y-3">
-              {agenda.map((row) => (
-                <li key={`${row.time}-${row.title}`} className="flex items-start gap-3">
-                  <span className="w-16 shrink-0 font-mono font-bold text-primary text-sm pt-0.5">{row.time}</span>
-                  <span className="text-sm font-semibold text-text-leaf dark:text-white">{row.title}</span>
-                </li>
-              ))}
-            </ul>
-          </article>
-
+        <section className="grid gap-8 lg:grid-cols-1 lg:items-start">
           <article className="rounded-2xl border border-border-green bg-white dark:bg-white/5 p-6 md:p-8">
             <h2 className="text-2xl font-black dark:text-white">Venue & access</h2>
             <p className="mt-2 text-subtext-leaf">
