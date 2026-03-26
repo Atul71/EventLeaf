@@ -49,7 +49,7 @@ So that I can easily select green-certified venues and explicitly define the sus
 
 # What issues your team planned to address?
 
-This sprint aligned with the user stories above. The **backend** team planned to integrate the **Google Calendar API**, expose **event impact metrics**, and implement **search with a green-priority** focus so sustainability-related queries are first-class. The **frontend** team planned an **event detail view** that explains the green badge and surfaces venue **eco-certifications**, a **discovery feed** with **sustainability filters** for eco-conscious attendees, **profile and impact history** so users can see resources saved through their participation, and an **event creation wizard** for organizers to pick green venues and define initiatives for an eco-friendly badge. Each item was intended to be reviewed by another member of the same team (frontend or backend).
+This sprint aligned with the user stories above. The **backend** team planned to integrate the Calendar feature, expose **event impact metrics**, and implement **search with a green-priority** focus so sustainability-related queries are first-class. The **frontend** team planned an **event detail view** that explains the green badge and surfaces venue **eco-certifications**, a **discovery feed** with **sustainability filters** for eco-conscious attendees, **profile and impact history** so users can see resources saved through their participation, and an **event creation wizard** for organizers to pick green venues and define initiatives for an eco-friendly badge. Each item was intended to be reviewed by another member of the same team (frontend or backend).
 
 # Unit test - Frontend
 This Cypress e2e test stubs the backend event APIs so the UI always gets a known list of 3 events, then it visits /events and checks that all 3 “View Event” links are rendered; after that, it switches the Date dropdown to next7 and verifies the list shrinks to 2 events, then it uses the search bar (aria-label="Search Events") to search for “tomorrow land” and verifies only 1 event remains; finally, it clicks the first “View Event” and asserts that the “Back” link exists and navigates back to /events
@@ -67,7 +67,7 @@ Built the functionality that provides paperless scheduling via a downloadable iC
 
 # Which ones were successfully completed?
 
-All planned features for Sprint 2 were successfully completed.
+We had one ticket which was beyond the project scope, so we have decided to close and make it a stale ticket and we shall not be implementing the feature(API: Search using Green Priority).
 
 
 # Which ones didn’t and why?
@@ -77,7 +77,7 @@ https://github.com/Atul71/EventLeaf/blob/main/api/README.md
 
 # Links to YouTube videos
 
-Integrated Video - 
+Integrated Video - https://www.youtube.com/watch?v=h8NfJGM-yP4
 
 Link to the board
 [https://github.com/users/Atul71/projects/5](https://github.com/users/Atul71/projects/5)
