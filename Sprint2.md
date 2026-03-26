@@ -34,14 +34,14 @@ So that I can prioritize attending events that align with my sustainability valu
 
 Shane George Thomas  
 UI: User Profile & "Impact History" - 5 story points 
-User Story
-As an eco-conscious attendee,
+<BR>User Story
+<BR>As an eco-conscious attendee,
 I want to view a calculated summary of the environmental resources saved by my participation (like paper and carbon),
 So that I feel validated in my choice to support sustainable events and can track my personal contribution over time.
 
 <BR>UI: Event Creation Wizard - 5 story points 
-User Story
-As an event organizer,
+<BR>User Story
+<BR>As an event organizer,
 I want to follow a guided, step-by-step process to set up my event,
 So that I can easily select green-certified venues and explicitly define the sustainability initiatives that will earn my event an "Eco-Friendly" badge.
 
