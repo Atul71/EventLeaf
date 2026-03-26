@@ -15,7 +15,7 @@ We have completed the following CR for this sprint.
 
 ## Backend (API)
 Vivek Chenganassery  
-API: Integrate Google Calendar API Service - 5 story points
+API: Integrate Calendar API Service - 5 story points
 
 Pritika Kannapiran  
 API: Fetch Event Impact Metrics - 2 story points
