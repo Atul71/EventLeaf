@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Atul71/EventLeaf/api/internal/middleware"
 	"github.com/Atul71/EventLeaf/api/internal/models"
 	"github.com/Atul71/EventLeaf/api/internal/service"
 	"github.com/gin-gonic/gin"
@@ -36,6 +37,26 @@ func NewEventHandler(
 	}
 }
 
+func isEventPubliclyListed(e *models.Event) bool {
+	return e.Status == "published" && e.Visibility == "public"
+}
+
+func authUserID(c *gin.Context) (uuid.UUID, bool) {
+	v, ok := c.Get(middleware.ContextUserIDKey)
+	if !ok || v == nil {
+		return uuid.Nil, false
+	}
+	s, ok := v.(string)
+	if !ok || s == "" {
+		return uuid.Nil, false
+	}
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return uuid.Nil, false
+	}
+	return id, true
+}
+
 // CreateEvent godoc
 // @Summary      Create a new event
 // @Description  Creates an event and verifies if it meets Green criteria (eco-certified venue + at least 2 sustainability flags)
@@ -52,6 +73,16 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 	var req models.CreateEventRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: " + err.Error()})
+		return
+	}
+
+	sessUID, ok := authUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing auth"})
+		return
+	}
+	if req.OrganizerID != sessUID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "organizer_id must match signed-in user"})
 		return
 	}
 
@@ -135,6 +166,13 @@ func (h *EventHandler) GetEventCalendarICS(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load event: " + err.Error()})
 		return
 	}
+	if !isEventPubliclyListed(event) {
+		uid, ok := authUserID(c)
+		if !ok || event.OrganizerID != uid {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+			return
+		}
+	}
 
 	var venue *models.Venue
 	if event.VenueID != nil {
@@ -209,7 +247,82 @@ func (h *EventHandler) GetEvent(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch event"})
 		return
 	}
+	if !isEventPubliclyListed(event) {
+		uid, ok := authUserID(c)
+		if !ok || event.OrganizerID != uid {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+			return
+		}
+	}
 	c.JSON(http.StatusOK, event)
+}
+
+// ListMyEvents returns all events for the signed-in organizer (drafts and published).
+func (h *EventHandler) ListMyEvents(c *gin.Context) {
+	uid, ok := authUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing auth"})
+		return
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if limit < 1 || limit > 500 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	events, err := h.eventRepo.ListByOrganizer(c.Request.Context(), uid, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch events: " + err.Error()})
+		return
+	}
+	if events == nil {
+		events = []models.Event{}
+	}
+	c.JSON(http.StatusOK, events)
+}
+
+// PublishEvent sets a draft (or existing) event to published so it appears in Discover.
+func (h *EventHandler) PublishEvent(c *gin.Context) {
+	uid, ok := authUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing auth"})
+		return
+	}
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+	ctx := c.Request.Context()
+	event, err := h.eventRepo.PublishForOrganizer(ctx, id, uid)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to publish event: " + err.Error()})
+		return
+	}
+
+	var selectedVenue *models.Venue
+	if event.VenueID != nil {
+		v, err := h.venueRepo.GetByID(ctx, *event.VenueID)
+		if err == nil {
+			selectedVenue = v
+		}
+	}
+	resp := models.CreateEventResponse{
+		Event:           *event,
+		CalendarICSPath: "/api/v1/events/" + event.ID.String() + "/calendar.ics",
+	}
+	if h.googleCalendar != nil {
+		if err := h.googleCalendar.SyncPublishedEvent(ctx, event, selectedVenue); err != nil {
+			resp.CalendarSyncError = err.Error()
+		}
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 // ListEcoAttributes godoc

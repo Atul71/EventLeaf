@@ -12,6 +12,9 @@ type Config struct {
 	DBUser     string
 	DBPassword string
 	AppPort    string
+	JWTSecret  string
+	AuthCookieName string
+	AuthCookieSecure bool
 	GoogleClientID          string
 	GoogleClientSecret      string
 	GoogleRefreshToken      string
@@ -27,6 +30,9 @@ func Load() *Config {
 		DBUser:     getEnv("DB_USER", "eventleaf_user"),
 		DBPassword: getEnv("DB_PASSWORD", "eventleaf_password"),
 		AppPort:    getEnv("APP_PORT", "3000"),
+		JWTSecret:  getEnv("JWT_SECRET", "dev-insecure-secret-change-me"),
+		AuthCookieName: getEnv("AUTH_COOKIE_NAME", "eventleaf_session"),
+		AuthCookieSecure: getEnv("AUTH_COOKIE_SECURE", "true") != "false",
 		GoogleClientID:         getEnv("GOOGLE_CLIENT_ID", ""),
 		GoogleClientSecret:     getEnv("GOOGLE_CLIENT_SECRET", ""),
 		GoogleRefreshToken:     getEnv("GOOGLE_REFRESH_TOKEN", ""),

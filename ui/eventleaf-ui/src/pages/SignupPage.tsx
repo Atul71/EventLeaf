@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { notifyAuthSessionChanged } from "../api/eventleafApi";
 import { Logo } from "../components/Logo";
 
 export function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const leafSvg = (
@@ -41,23 +44,85 @@ export function SignupPage() {
 
           <form
             className="space-y-5"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              navigate("/login");
+              setSubmitError(null);
+              setSubmitting(true);
+              try {
+                const fd = new FormData(e.currentTarget);
+                const username = String(fd.get("username") ?? "").trim().toLowerCase();
+                const email = String(fd.get("email") ?? "").trim();
+                const password = String(fd.get("password") ?? "");
+                const isOrganizer = fd.get("is_organizer") === "on";
+
+                const res = await fetch("/api/v1/signup", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+                  body: JSON.stringify({
+                    username,
+                    email,
+                    password,
+                    is_organizer: isOrganizer,
+                    is_eco_conscious: true,
+                  }),
+                });
+
+                if (!res.ok) {
+                  let msg = "Signup failed";
+                  try {
+                    const data = (await res.json()) as { error?: string };
+                    if (data?.error) msg = data.error;
+                  } catch {
+                    /* ignore */
+                  }
+                  setSubmitError(msg);
+                  return;
+                }
+
+                let path = "/profile";
+                try {
+                  const data = (await res.json()) as {
+                    redirect_path?: string;
+                    is_organizer?: boolean;
+                  };
+                  if (data.redirect_path) path = data.redirect_path;
+                  else if (data.is_organizer) path = "/organizer";
+                } catch {
+                  /* keep default */
+                }
+                notifyAuthSessionChanged();
+                navigate(path);
+              } finally {
+                setSubmitting(false);
+              }
             }}
           >
+            {submitError ? (
+              <div
+                role="alert"
+                className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-950 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
+              >
+                <strong className="font-bold">Could not create account:</strong> {submitError}
+              </div>
+            ) : null}
             <div className="space-y-1.5">
               <label className="text-xs font-bold uppercase tracking-wider text-subtext-leaf dark:text-primary/60 px-1">
-                Full Name
+                Username
               </label>
               <div className="relative group">
                 <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-subtext-leaf text-xl transition-colors group-focus-within:text-primary">
                   person
                 </span>
                 <input
+                  name="username"
                   className="w-full pl-12 pr-4 py-3.5 bg-[#f8fcf8] dark:bg-[#0d1b0f] border border-border-green dark:border-primary/20 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-text-leaf dark:text-white placeholder-subtext-leaf/50 transition-all"
-                  placeholder="Jane Doe"
+                  placeholder="jane_doe"
                   type="text"
+                  pattern="[a-z0-9_]+"
+                  minLength={3}
+                  maxLength={30}
+                  required
                 />
               </div>
             </div>
@@ -70,9 +135,11 @@ export function SignupPage() {
                   mail
                 </span>
                 <input
+                  name="email"
                   className="w-full pl-12 pr-4 py-3.5 bg-[#f8fcf8] dark:bg-[#0d1b0f] border border-border-green dark:border-primary/20 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-text-leaf dark:text-white placeholder-subtext-leaf/50 transition-all"
                   placeholder="name@email.com"
                   type="email"
+                  required
                 />
               </div>
             </div>
@@ -85,9 +152,12 @@ export function SignupPage() {
                   lock
                 </span>
                 <input
+                  name="password"
                   className="w-full pl-12 pr-12 py-3.5 bg-[#f8fcf8] dark:bg-[#0d1b0f] border border-border-green dark:border-primary/20 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-text-leaf dark:text-white placeholder-subtext-leaf/50 transition-all"
                   placeholder="••••••••"
                   type={showPassword ? "text" : "password"}
+                  minLength={8}
+                  required
                 />
                 <button
                   type="button"
@@ -105,6 +175,7 @@ export function SignupPage() {
                   id="terms"
                   type="checkbox"
                   className="w-5 h-5 rounded border-border-green text-primary focus:ring-primary/30 cursor-pointer"
+                  required
                 />
               </div>
               <label className="text-xs text-subtext-leaf dark:text-primary/70 leading-relaxed cursor-pointer select-none" htmlFor="terms">
@@ -119,11 +190,16 @@ export function SignupPage() {
                 regarding my personal data.
               </label>
             </div>
+            <label className="flex items-center gap-2 text-xs text-subtext-leaf dark:text-primary/70">
+              <input id="is_organizer" name="is_organizer" type="checkbox" className="w-4 h-4 rounded border-border-green text-primary focus:ring-primary/30 cursor-pointer" />
+              I want to create events as an organizer
+            </label>
             <button
               type="submit"
+              disabled={submitting}
               className="w-full bg-primary hover:bg-[#25d633] text-text-leaf font-extrabold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group"
             >
-              <span>Create Account</span>
+              <span>{submitting ? "Creating Account…" : "Create Account"}</span>
               <span className="material-symbols-outlined text-lg transition-transform group-hover:translate-x-1">
                 arrow_forward
               </span>

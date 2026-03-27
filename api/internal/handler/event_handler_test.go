@@ -42,6 +42,14 @@ func (f *fakeEventRepo) ListPublished(ctx context.Context, limit, offset int) ([
 	return []models.Event{}, nil
 }
 
+func (f *fakeEventRepo) ListByOrganizer(ctx context.Context, organizerID uuid.UUID, limit, offset int) ([]models.Event, error) {
+	return nil, nil
+}
+
+func (f *fakeEventRepo) PublishForOrganizer(ctx context.Context, eventID, organizerID uuid.UUID) (*models.Event, error) {
+	return nil, pgx.ErrNoRows
+}
+
 type fakeVenueRepo struct {
 	getFn func(ctx context.Context, id uuid.UUID) (*models.Venue, error)
 }
@@ -136,7 +144,8 @@ func TestGetEventCalendarICS_OK(t *testing.T) {
 		EventDate:      time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
 		EventStartTime: "12:00:00",
 		EventEndTime:   "13:00:00",
-		Status:         "draft",
+		Status:         "published",
+		Visibility:     "public",
 	}
 	events := &fakeEventRepo{
 		getFn: func(ctx context.Context, eid uuid.UUID) (*models.Event, error) {

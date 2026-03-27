@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Logo } from "../components/Logo";
 import { EcoCertifiedBadge } from "../components/organizer/EcoCertifiedBadge";
-import { fetchEventById, type ApiEvent } from "../api/eventleafApi";
+import { fetchEventById, publishEventById, type ApiEvent } from "../api/eventleafApi";
 import {
   certificationsFromApi,
   ecoProofsFromApi,
@@ -69,6 +69,8 @@ export function EventLandingPage() {
   const [event, setEvent] = useState<ApiEvent | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [publishBusy, setPublishBusy] = useState(false);
+  const [publishErr, setPublishErr] = useState<string | null>(null);
 
   useEffect(() => {
     if (!resolvedEventId) {
@@ -145,6 +147,15 @@ export function EventLandingPage() {
         <main className="mx-auto max-w-3xl px-6 py-20 text-center">
           <h1 className="text-3xl font-black dark:text-white">Event not found</h1>
           <p className="mt-3 text-subtext-leaf">{error || "The event link looks incorrect or no longer exists."}</p>
+          <p className="mt-4 text-sm text-subtext-leaf max-w-md mx-auto">
+            Drafts are only visible to the organizer. If you created this event, sign in with the same account to open it.
+          </p>
+          <Link
+            to="/login"
+            className="mt-4 inline-flex items-center gap-2 rounded-lg border border-border-green px-4 py-2 text-sm font-bold text-text-leaf dark:text-white hover:bg-soft-green"
+          >
+            Sign in
+          </Link>
         </main>
       </div>
     );
@@ -176,6 +187,22 @@ export function EventLandingPage() {
     (ev as any).trailerUrl ??
     (ev as any).youtube_trailer_url ??
     null;
+
+  const isDraft = ev.status !== "published";
+
+  async function handlePublishFromLanding() {
+    setPublishBusy(true);
+    setPublishErr(null);
+    try {
+      await publishEventById(ev.id);
+      const updated = await fetchEventById(ev.id);
+      setEvent(updated);
+    } catch (e) {
+      setPublishErr(e instanceof Error ? e.message : "Could not publish");
+    } finally {
+      setPublishBusy(false);
+    }
+  }
 
   async function handleShare() {
     const url = `${window.location.origin}/events/${ev.id}`;
@@ -223,6 +250,24 @@ export function EventLandingPage() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-10 space-y-12">
+        {isDraft ? (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40 px-4 py-4 sm:px-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-semibold text-amber-950 dark:text-amber-100">
+                Draft — not shown on Discover. Publish when you are ready for everyone to see it.
+              </p>
+              <button
+                type="button"
+                disabled={publishBusy}
+                onClick={() => void handlePublishFromLanding()}
+                className="shrink-0 rounded-lg bg-text-leaf px-4 py-2 text-sm font-bold text-white dark:bg-white dark:text-text-leaf disabled:opacity-50"
+              >
+                {publishBusy ? "Publishing…" : "Publish now"}
+              </button>
+            </div>
+            {publishErr ? <p className="mt-2 text-sm text-red-700 dark:text-red-300">{publishErr}</p> : null}
+          </div>
+        ) : null}
         <section className="grid gap-8 lg:grid-cols-2 lg:items-center">
           <div className="space-y-5">
             {ev.is_eco_friendly ? (

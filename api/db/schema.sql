@@ -8,6 +8,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Stores user account information for both organizers and attendees
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     first_name VARCHAR(100) NOT NULL,
@@ -25,6 +26,7 @@ CREATE TABLE users (
 
 -- Create index on email for faster lookups
 CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_is_organizer ON users(is_organizer);
 
 -- Venues Table
