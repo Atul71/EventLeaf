@@ -90,6 +90,31 @@ export type CreateEventResponse = {
   green_criteria_not_met?: string[];
 };
 
+export type CurrentUser = {
+  user_id: string;
+  email: string;
+  username?: string;
+  is_organizer?: boolean;
+};
+
+export async function fetchCurrentUser(): Promise<CurrentUser> {
+  const res = await fetch(`${API_PREFIX}/me`, { credentials: "include" });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json() as Promise<CurrentUser>;
+}
+
+export async function logoutSession(): Promise<void> {
+  const res = await fetch(`${API_PREFIX}/logout`, { method: "POST", credentials: "include" });
+  if (!res.ok) throw new Error(await parseError(res));
+}
+
+/** Window event name: fire after login/signup so nav bars can refetch `/me`. */
+export const AUTH_SESSION_CHANGED_EVENT = "eventleaf-auth-changed";
+
+export function notifyAuthSessionChanged(): void {
+  window.dispatchEvent(new CustomEvent(AUTH_SESSION_CHANGED_EVENT));
+}
+
 export async function fetchDemoOrganizerId(): Promise<string> {
   const res = await fetch(`${API_PREFIX}/bootstrap/organizer-id`);
   if (!res.ok) throw new Error(await parseError(res));
@@ -115,16 +140,44 @@ export async function fetchPublishedEvents(limit = 100): Promise<ApiEvent[]> {
   return res.json() as Promise<ApiEvent[]>;
 }
 
+/** All events for the signed-in organizer (drafts and published). Tries `/organizer/events` then `/me/events`. */
+export async function fetchMyEvents(limit = 200): Promise<ApiEvent[]> {
+  const qs = `limit=${limit}&offset=0`;
+  const urls = [`${API_PREFIX}/organizer/events?${qs}`, `${API_PREFIX}/me/events?${qs}`];
+  for (const url of urls) {
+    const res = await fetch(url, { credentials: "include" });
+    if (res.ok) {
+      return res.json() as Promise<ApiEvent[]>;
+    }
+    if (res.status !== 404) {
+      throw new Error(await parseError(res));
+    }
+  }
+  throw new Error(
+    "Could not load your events (organizer list API missing). Rebuild and restart the API so GET /api/v1/organizer/events is available."
+  );
+}
+
 export async function fetchEventById(id: string): Promise<ApiEvent> {
-  const res = await fetch(`${API_PREFIX}/events/${encodeURIComponent(id)}`);
+  const res = await fetch(`${API_PREFIX}/events/${encodeURIComponent(id)}`, { credentials: "include" });
   if (!res.ok) throw new Error(await parseError(res));
   return res.json() as Promise<ApiEvent>;
+}
+
+export async function publishEventById(id: string): Promise<CreateEventResponse> {
+  const res = await fetch(`${API_PREFIX}/events/${encodeURIComponent(id)}/publish`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json() as Promise<CreateEventResponse>;
 }
 
 export async function createEvent(body: CreateEventPayload): Promise<CreateEventResponse> {
   const res = await fetch(`${API_PREFIX}/events`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(await parseError(res));

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { SustainableVenueCard } from "../components/organizer/SustainableVenueCard";
+import { BackButton } from "../components/BackButton";
 import { fetchVenues, type ApiVenue } from "../api/eventleafApi";
 import {
   apiVenueToSustainableVenue,
@@ -176,6 +177,7 @@ export function VenueBrowserPage() {
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-soft-green dark:border-[#1a3a1d] px-6 lg:px-12 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 md:gap-8 min-w-0">
+            <BackButton fallbackTo="/organizer" />
             <Link to="/" className="flex items-center gap-2 text-text-leaf dark:text-white shrink-0">
               <span className="material-symbols-outlined text-primary text-2xl sm:text-3xl">
                 energy_savings_leaf

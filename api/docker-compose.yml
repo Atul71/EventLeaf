@@ -1,9 +1,44 @@
+name: eventleaf
+
 services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eventleaf-api
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      APP_PORT: ${APP_PORT:-3000}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-eventleaf_db}
+      DB_USER: ${DB_USER:-eventleaf_user}
+      DB_PASSWORD: ${DB_PASSWORD:-eventleaf_password}
+      JWT_SECRET: ${JWT_SECRET:-dev-insecure-secret-change-me}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      AUTH_COOKIE_NAME: ${AUTH_COOKIE_NAME:-eventleaf_session}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REFRESH_TOKEN: ${GOOGLE_REFRESH_TOKEN:-}
+      GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-primary}
+      GOOGLE_CALENDAR_TIMEZONE: ${GOOGLE_CALENDAR_TIMEZONE:-America/New_York}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - eventleaf-network
+
   # PostgreSQL Database Service
   postgres:
     image: postgres:15-alpine
     container_name: eventleaf-postgres
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       POSTGRES_USER: ${DB_USER:-eventleaf_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-eventleaf_password}
@@ -31,8 +66,10 @@ services:
     image: dpage/pgadmin4:latest
     container_name: eventleaf-pgadmin
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@eventleaf.local}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@eventleaf.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
       PGADMIN_CONFIG_SERVER_MODE: 'False'
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'

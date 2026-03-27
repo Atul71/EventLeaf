@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { notifyAuthSessionChanged } from "../api/eventleafApi";
 import { Logo } from "../components/Logo";
 
 const FOREST_IMAGE =
@@ -7,6 +8,8 @@ const FOREST_IMAGE =
 
 export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   return (
@@ -43,14 +46,63 @@ export function LoginPage() {
             </div>
             <form
               className="space-y-6"
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
-                navigate("/profile");
+                setSubmitError(null);
+                setSubmitting(true);
+                try {
+                  const fd = new FormData(e.currentTarget);
+                  const email = String(fd.get("email") ?? "");
+                  const password = String(fd.get("password") ?? "");
+
+                  const res = await fetch("/api/v1/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ email, password }),
+                  });
+
+                  if (!res.ok) {
+                    let msg = "Login failed";
+                    try {
+                      const data = (await res.json()) as { error?: string };
+                      if (data?.error) msg = data.error;
+                    } catch {
+                      /* ignore */
+                    }
+                    setSubmitError(msg);
+                    return;
+                  }
+
+                  let path = "/profile";
+                  try {
+                    const data = (await res.json()) as {
+                      redirect_path?: string;
+                      is_organizer?: boolean;
+                    };
+                    if (data.redirect_path) path = data.redirect_path;
+                    else if (data.is_organizer) path = "/organizer";
+                  } catch {
+                    /* keep default */
+                  }
+                  notifyAuthSessionChanged();
+                  navigate(path);
+                } finally {
+                  setSubmitting(false);
+                }
               }}
             >
+              {submitError ? (
+                <div
+                  role="alert"
+                  className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-950 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
+                >
+                  <strong className="font-bold">Could not sign in:</strong> {submitError}
+                </div>
+              ) : null}
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-text-leaf dark:text-white/90" htmlFor="email">
-                  Email Address
+                  Email or Username
                 </label>
                 <div className="relative group">
                   <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-subtext-leaf">
@@ -60,7 +112,7 @@ export function LoginPage() {
                     className="block w-full pl-11 pr-4 py-3.5 bg-white dark:bg-white/5 border border-border-green dark:border-white/10 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none text-text-leaf dark:text-white placeholder-subtext-leaf/50"
                     id="email"
                     name="email"
-                    placeholder="name@company.com"
+                    placeholder="name@company.com or username"
                     required
                     type="email"
                   />
@@ -101,9 +153,10 @@ export function LoginPage() {
               </div>
               <button
                 type="submit"
+                disabled={submitting}
                 className="w-full flex justify-center items-center gap-2 py-4 px-4 bg-primary hover:opacity-90 text-text-leaf font-bold rounded-lg shadow-lg shadow-primary/20 transition-all active:scale-[0.98]"
               >
-                Sign In
+                {submitting ? "Signing In…" : "Sign In"}
                 <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
               </button>
             </form>

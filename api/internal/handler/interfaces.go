@@ -12,7 +12,11 @@ type EventRepository interface {
 	Create(ctx context.Context, req *models.CreateEventRequest, isEcoFriendly bool) (*models.Event, error)
 	// ListPublished returns public + published events for the Discover UI.
 	ListPublished(ctx context.Context, limit, offset int) ([]models.Event, error)
+	// ListByOrganizer returns all events for an organizer (any status), newest first.
+	ListByOrganizer(ctx context.Context, organizerID uuid.UUID, limit, offset int) ([]models.Event, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*models.Event, error)
+	// PublishForOrganizer sets status to published when the event belongs to the organizer.
+	PublishForOrganizer(ctx context.Context, eventID, organizerID uuid.UUID) (*models.Event, error)
 }
 
 // VenueRepository is the subset of venue persistence used by HTTP handlers.
