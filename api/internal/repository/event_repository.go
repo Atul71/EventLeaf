@@ -207,6 +207,48 @@ func (r *EventRepository) ListPublished(ctx context.Context, limit, offset int) 
 	return out, rows.Err()
 }
 
+// ListByOrganizer returns events for one organizer (draft, published, etc.), newest first.
+func (r *EventRepository) ListByOrganizer(ctx context.Context, organizerID uuid.UUID, limit, offset int) ([]models.Event, error) {
+	rows, err := r.db.Pool.Query(ctx,
+		`SELECT `+eventJoinSelect+`
+		FROM events e
+		LEFT JOIN venues v ON v.id = e.venue_id
+		WHERE e.organizer_id = $1
+		ORDER BY e.updated_at DESC NULLS LAST, e.created_at DESC
+		LIMIT $2 OFFSET $3`,
+		organizerID, limit, offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []models.Event
+	for rows.Next() {
+		ev, err := scanEventJoined(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *ev)
+	}
+	return out, rows.Err()
+}
+
+// PublishForOrganizer sets status to published for the organizer's event (idempotent if already published).
+func (r *EventRepository) PublishForOrganizer(ctx context.Context, eventID, organizerID uuid.UUID) (*models.Event, error) {
+	cmd, err := r.db.Pool.Exec(ctx,
+		`UPDATE events SET status = 'published', updated_at = NOW() WHERE id = $1 AND organizer_id = $2`,
+		eventID, organizerID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if cmd.RowsAffected() == 0 {
+		return nil, pgx.ErrNoRows
+	}
+	return r.GetByID(ctx, eventID)
+}
+
 // GetByID returns one event with optional venue name/city.
 func (r *EventRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Event, error) {
 	ev, err := scanEventJoined(r.db.Pool.QueryRow(ctx,

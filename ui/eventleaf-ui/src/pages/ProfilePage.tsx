@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Logo } from "../components/Logo";
+import { BackButton } from "../components/BackButton";
 import { fetchAttendeeImpact } from "../api/mockAttendeeImpactApi";
 import type { AttendeeImpactPayload, PastGreenEvent } from "../mocks/attendeeImpactData";
 import { EcoImpactHero } from "../components/attendee/EcoImpactHero";
@@ -23,12 +24,37 @@ const QR_CODE_IMAGE =
 type ProfileTab = "tickets" | "impact" | "stubs" | "saved" | "settings";
 
 export function ProfilePage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<ProfileTab>("impact");
   const [qrModalEvent, setQrModalEvent] = useState<string | null>(null);
   const [impact, setImpact] = useState<AttendeeImpactPayload | null>(null);
   const [impactLoading, setImpactLoading] = useState(true);
   const [impactError, setImpactError] = useState<string | null>(null);
   const [shareEvent, setShareEvent] = useState<PastGreenEvent | null>(null);
+  const [viewer, setViewer] = useState<{ user_id: string; email: string; username?: string; is_organizer?: boolean } | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setAuthLoading(true);
+    fetch("/api/v1/me", { credentials: "include" })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("unauthorized");
+        return (await res.json()) as { user_id: string; email: string; username?: string; is_organizer?: boolean };
+      })
+      .then((data) => {
+        if (!cancelled) setViewer(data);
+      })
+      .catch(() => {
+        if (!cancelled) navigate("/login");
+      })
+      .finally(() => {
+        if (!cancelled) setAuthLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,14 +86,17 @@ export function ProfilePage() {
   };
 
   const displayName = impact?.displayName ?? "Vivek Chengannassery";
+  const effectiveName = viewer?.username ? `@${viewer.username}` : displayName;
   const homeCity = impact?.homeCity ?? "Portland, Oregon";
   const sustainabilityScore = impact ? Math.round(impact.rankProgressPercent * 10 + 50) : 850;
+  const profileSubtitle = viewer?.email ?? homeCity;
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-background-light dark:bg-background-dark text-text-leaf font-display">
       <header className="sticky top-0 z-50 w-full border-b border-border-leaf bg-white/80 dark:bg-background-dark/80 backdrop-blur-md px-4 py-3 sm:px-6 md:px-20">
         <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-3 md:gap-8">
+            <BackButton fallbackTo="/events" />
             <Logo />
             <nav className="hidden md:flex items-center gap-6">
               <Link to={mockLinks.discover} className="text-sm font-semibold hover:text-primary transition-colors">
@@ -118,6 +147,16 @@ export function ProfilePage() {
               style={{ backgroundImage: `url('${AVATAR_HEADER}')` }}
               aria-label="Profile"
             />
+            <button
+              type="button"
+              onClick={async () => {
+                await fetch("/api/v1/logout", { method: "POST", credentials: "include" }).catch(() => undefined);
+                navigate("/login");
+              }}
+              className="rounded-lg border border-border-leaf px-3 py-2 text-xs font-bold uppercase tracking-wide text-subtext-leaf hover:bg-neutral-bg dark:border-white/10 dark:text-white"
+            >
+              Sign out
+            </button>
           </div>
         </div>
       </header>
@@ -138,10 +177,10 @@ export function ProfilePage() {
                 </div>
               </div>
               <div className="min-w-0">
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold truncate">{displayName}</h1>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold truncate">{authLoading ? "Loading..." : effectiveName}</h1>
                 <p className="text-subtext-leaf font-medium flex items-center gap-1 text-sm sm:text-base">
                   <span className="material-symbols-outlined text-sm shrink-0">location_on</span>
-                  <span className="truncate">{homeCity}</span>
+                  <span className="truncate">{profileSubtitle}</span>
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <span className="px-3 py-1 bg-neutral-bg dark:bg-white/5 text-subtext-leaf rounded-full text-xs font-bold uppercase tracking-wider">

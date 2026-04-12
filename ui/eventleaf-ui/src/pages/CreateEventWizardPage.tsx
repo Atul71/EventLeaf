@@ -4,7 +4,7 @@ import { OrganizerSidebar } from "../components/organizer/OrganizerSidebar";
 import { EcoCertifiedBadge } from "../components/organizer/EcoCertifiedBadge";
 import {
   createEvent,
-  fetchDemoOrganizerId,
+  fetchCurrentUser,
   fetchEcoAttributes,
   fetchVenues,
   normalizeTimeForApi,
@@ -152,7 +152,7 @@ export function CreateEventWizardPage() {
   const [eventEndTime, setEventEndTime] = useState("18:00");
   const [ticketPrice, setTicketPrice] = useState(0);
   const [totalCapacity, setTotalCapacity] = useState(100);
-  const [submitting, setSubmitting] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"draft" | "published" | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [venueOpen, setVenueOpen] = useState(false);
   const [digitalOnlyTicketing, setDigitalOnlyTicketing] = useState(true);
@@ -166,10 +166,10 @@ export function CreateEventWizardPage() {
     let cancelled = false;
     setApiLoading(true);
     setApiLoadError(null);
-    Promise.all([fetchDemoOrganizerId(), fetchVenues(100), fetchEcoAttributes()])
-      .then(([orgId, venues, eco]) => {
+    Promise.all([fetchCurrentUser(), fetchVenues(100), fetchEcoAttributes()])
+      .then(([me, venues, eco]) => {
         if (cancelled) return;
-        setOrganizerId(orgId);
+        setOrganizerId(me.user_id);
         setAllVenues(venues);
         setEcoAttributes(eco);
       })
@@ -305,13 +305,13 @@ export function CreateEventWizardPage() {
     if (step > 1) setStep((s) => s - 1);
   }
 
-  async function publishEvent() {
+  async function submitEvent(status: "draft" | "published") {
     if (!organizerId || !venue) {
       setSubmitError("Missing organizer or venue.");
       return;
     }
     setSubmitError(null);
-    setSubmitting(true);
+    setPendingAction(status);
     try {
       const ecoIds = buildEcoAttributeIds(ecoAttributes, {
         digitalOnlyTicketing,
@@ -334,20 +334,28 @@ export function CreateEventWizardPage() {
         eco_summary: ecoSummary,
         ticket_price: ticketPrice,
         total_capacity: totalCapacity,
-        status: "published",
+        status,
         visibility: "public",
         category,
         eco_attribute_ids: ecoIds,
       });
-      navigate(`/events/${res.event.id}`, { state: { created: true, isGreen: res.is_green } });
+      if (status === "draft") {
+        navigate("/organizer/events", {
+          replace: false,
+          state: { draftSaved: true, eventTitle: res.event.title, newEvent: res.event },
+        });
+      } else {
+        navigate(`/events/${res.event.id}`, { state: { created: true, isGreen: res.is_green } });
+      }
     } catch (e) {
-      setSubmitError(e instanceof Error ? e.message : "Could not publish event");
+      setSubmitError(e instanceof Error ? e.message : "Could not save event");
     } finally {
-      setSubmitting(false);
+      setPendingAction(null);
     }
   }
 
   const canPublish = step1Complete && venue != null;
+  const submitting = pendingAction !== null;
 
   return (
     <div className="flex min-h-screen bg-background-light dark:bg-background-dark text-text-leaf">
@@ -894,7 +902,7 @@ export function CreateEventWizardPage() {
             >
               Back
             </button>
-            <div className="flex gap-2 justify-end">
+            <div className="flex flex-wrap gap-2 justify-end">
               {step < 4 ? (
                 <button
                   type="button"
@@ -905,14 +913,24 @@ export function CreateEventWizardPage() {
                   Continue
                 </button>
               ) : (
-                <button
-                  type="button"
-                  disabled={!canPublish || submitting}
-                  onClick={() => void publishEvent()}
-                  className="rounded-xl bg-text-leaf px-6 py-2.5 text-sm font-black text-white dark:bg-white dark:text-text-leaf hover:opacity-90 disabled:opacity-40"
-                >
-                  {submitting ? "Publishing…" : "Publish event"}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    disabled={!canPublish || submitting}
+                    onClick={() => void submitEvent("draft")}
+                    className="rounded-xl border border-border-green px-6 py-2.5 text-sm font-bold text-text-leaf dark:text-white dark:border-white/20 hover:bg-soft-green/50 dark:hover:bg-white/5 disabled:opacity-40"
+                  >
+                    {pendingAction === "draft" ? "Saving…" : "Save as draft"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!canPublish || submitting}
+                    onClick={() => void submitEvent("published")}
+                    className="rounded-xl bg-text-leaf px-6 py-2.5 text-sm font-black text-white dark:bg-white dark:text-text-leaf hover:opacity-90 disabled:opacity-40"
+                  >
+                    {pendingAction === "published" ? "Publishing…" : "Publish event"}
+                  </button>
+                </>
               )}
             </div>
           </div>
