@@ -2,13 +2,13 @@
 -- This file contains sample data for testing and development purposes
 
 -- Insert sample users
-INSERT INTO users (email, password_hash, first_name, last_name, is_organizer, is_eco_conscious, bio)
+INSERT INTO users (username, email, password_hash, first_name, last_name, is_organizer, is_eco_conscious, bio)
 VALUES 
-    ('john.organizer@eventleaf.com', '$2b$10$dummyhash1', 'John', 'Organizer', true, true, 'Passionate event organizer focused on sustainability'),
-    ('jane.attendee@eventleaf.com', '$2b$10$dummyhash2', 'Jane', 'Attendee', false, true, 'Eco-conscious event enthusiast'),
-    ('bob.organizer@eventleaf.com', '$2b$10$dummyhash3', 'Bob', 'Manager', true, false, 'Professional event manager'),
-    ('alice.attendee@eventleaf.com', '$2b$10$dummyhash4', 'Alice', 'Smith', false, true, 'Love attending eco-friendly events'),
-    ('charlie.admin@eventleaf.com', '$2b$10$dummyhash5', 'Charlie', 'Admin', true, true, 'Platform administrator')
+    ('johnorganizer', 'john.organizer@eventleaf.com', '$2b$10$dummyhash1', 'John', 'Organizer', true, true, 'Passionate event organizer focused on sustainability'),
+    ('janeattendee', 'jane.attendee@eventleaf.com', '$2b$10$dummyhash2', 'Jane', 'Attendee', false, true, 'Eco-conscious event enthusiast'),
+    ('boborganizer', 'bob.organizer@eventleaf.com', '$2b$10$dummyhash3', 'Bob', 'Manager', true, false, 'Professional event manager'),
+    ('aliceattendee', 'alice.attendee@eventleaf.com', '$2b$10$dummyhash4', 'Alice', 'Smith', false, true, 'Love attending eco-friendly events'),
+    ('charlieadmin', 'charlie.admin@eventleaf.com', '$2b$10$dummyhash5', 'Charlie', 'Admin', true, true, 'Platform administrator')
 ON CONFLICT (email) DO NOTHING;
 
 -- Insert sample venues
@@ -322,3 +322,23 @@ WHERE NOT EXISTS (
     AND t.status = 'active'
     LIMIT 1
 );
+
+-- Demo login for JWT cookie auth (plaintext password: "password").
+-- Hash generated with: go run ./cmd/hashpassword password
+-- Re-applies hash on conflict so re-seeding fixes a bad manual INSERT.
+INSERT INTO users (username, email, password_hash, first_name, last_name, is_organizer, is_eco_conscious, bio)
+VALUES (
+    'demouser',
+    'demo@login.com',
+    '$2a$10$AGYEHdFAFySltJc6l5QcsenFWHkSUW0C/ZC/idD2TXaEJucoEy/By',
+    'Demo',
+    'User',
+    true,
+    true,
+    'Local dev login — password is "password" (see seed comment).'
+)
+ON CONFLICT (email) DO UPDATE SET
+    username = EXCLUDED.username,
+    password_hash = EXCLUDED.password_hash,
+    first_name = EXCLUDED.first_name,
+    last_name = EXCLUDED.last_name;

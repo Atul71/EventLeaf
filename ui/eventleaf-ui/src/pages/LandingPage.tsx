@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { AuthNavActions } from "../components/AuthNavActions";
 import { Logo } from "../components/Logo";
 
 // Lush forest canopy – environment-focused hero (Unsplash, free to use)
@@ -50,20 +51,7 @@ export function LandingPage() {
               About
             </a>
           </nav>
-          <div className="flex items-center gap-3">
-            <Link
-              to="/login"
-              className="px-4 py-2 text-sm font-bold hover:text-primary transition-colors dark:text-gray-300"
-            >
-              Login
-            </Link>
-            <Link
-              to="/signup"
-              className="bg-primary text-background-dark px-5 py-2 rounded-lg text-sm font-bold hover:opacity-90 transition-all shadow-sm"
-            >
-              Sign Up
-            </Link>
-          </div>
+          <AuthNavActions />
         </div>
       </header>
 
