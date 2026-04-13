@@ -58,6 +58,10 @@ func (f *fakeEventRepo) ListSavedByUser(ctx context.Context, userID uuid.UUID, l
 	return []models.Event{}, nil
 }
 
+func (f *fakeEventRepo) GetEcoAttributeNamesByEventID(ctx context.Context, eventID uuid.UUID) ([]string, error) {
+	return []string{}, nil
+}
+
 type fakeVenueRepo struct {
 	getFn func(ctx context.Context, id uuid.UUID) (*models.Venue, error)
 }

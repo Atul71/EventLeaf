@@ -7,19 +7,19 @@ import (
 )
 
 type CreateEventRequest struct {
-	Title           string     `json:"title" binding:"required,max=255"`
-	Description     string     `json:"description" binding:"required"`
-	OrganizerID     uuid.UUID  `json:"organizer_id" binding:"required"`
-	VenueID         *uuid.UUID `json:"venue_id"`
-	EventDate       string     `json:"event_date" binding:"required"`
-	EventStartTime  string     `json:"event_start_time" binding:"required"`
-	EventEndTime    string     `json:"event_end_time" binding:"required"`
-	EcoSummary      string     `json:"eco_summary"`
-	TicketPrice     float64    `json:"ticket_price" binding:"gte=0"`
-	TotalCapacity   int        `json:"total_capacity" binding:"gt=0"`
-	Status          string     `json:"status"`
-	Visibility      string     `json:"visibility"`
-	Category        string     `json:"category"`
+	Title           string      `json:"title" binding:"required,max=255"`
+	Description     string      `json:"description" binding:"required"`
+	OrganizerID     uuid.UUID   `json:"organizer_id" binding:"required"`
+	VenueID         *uuid.UUID  `json:"venue_id"`
+	EventDate       string      `json:"event_date" binding:"required"`
+	EventStartTime  string      `json:"event_start_time" binding:"required"`
+	EventEndTime    string      `json:"event_end_time" binding:"required"`
+	EcoSummary      string      `json:"eco_summary"`
+	TicketPrice     float64     `json:"ticket_price" binding:"gte=0"`
+	TotalCapacity   int         `json:"total_capacity" binding:"gt=0"`
+	Status          string      `json:"status"`
+	Visibility      string      `json:"visibility"`
+	Category        string      `json:"category"`
 	EcoAttributeIDs []uuid.UUID `json:"eco_attribute_ids"`
 }
 
@@ -45,9 +45,9 @@ type Event struct {
 	HasDigitalTicketing bool       `json:"has_digital_ticketing"`
 	HasPaperlessCheckin bool       `json:"has_paperless_checkin"`
 	// Populated for list/detail responses with a venue join (defaults false when venue is missing).
-	HasPublicTransit bool `json:"has_public_transit"`
-	CreatedAt           time.Time  `json:"created_at"`
-	UpdatedAt           time.Time  `json:"updated_at"`
+	HasPublicTransit bool      `json:"has_public_transit"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 	// Populated for list/detail responses with a venue join (omitted when empty).
 	VenueName *string `json:"venue_name,omitempty"`
 	VenueCity *string `json:"venue_city,omitempty"`
@@ -58,10 +58,12 @@ type Event struct {
 }
 
 type CreateEventResponse struct {
-	Event           Event    `json:"event"`
-	IsGreen         bool     `json:"is_green"`
-	GreenCriteria   []string `json:"green_criteria_met,omitempty"`
-	NotGreenReasons []string `json:"green_criteria_not_met,omitempty"`
-	CalendarSyncError string `json:"calendar_sync_error,omitempty"`
-	CalendarICSPath   string `json:"calendar_ics_path,omitempty"`
+	Event               Event         `json:"event"`
+	IsGreen             bool          `json:"is_green"`
+	SustainabilityScore float64       `json:"sustainability_score,omitempty"`
+	Metrics             *GreenMetrics `json:"metrics,omitempty"`
+	GreenCriteria       []string      `json:"green_criteria_met,omitempty"`
+	NotGreenReasons     []string      `json:"green_criteria_not_met,omitempty"`
+	CalendarSyncError   string        `json:"calendar_sync_error,omitempty"`
+	CalendarICSPath     string        `json:"calendar_ics_path,omitempty"`
 }

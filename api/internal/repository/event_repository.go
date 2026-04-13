@@ -292,6 +292,30 @@ func (r *EventRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Ev
 	return ev, nil
 }
 
+func (r *EventRepository) GetEcoAttributeNamesByEventID(ctx context.Context, eventID uuid.UUID) ([]string, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT ea.name
+		FROM event_eco_attributes eea
+		JOIN eco_attributes ea ON ea.id = eea.eco_attribute_id
+		WHERE eea.event_id = $1
+		ORDER BY ea.name
+	`, eventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var names []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		names = append(names, name)
+	}
+	return names, rows.Err()
+}
+
 func emptyToNull(s string) interface{} {
 	if s == "" {
 		return nil

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -113,18 +114,37 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 	}
 
 	greenResult := service.VerifyGreenCriteria(venueIsEcoCertified, venueIDProvided, ecoNames)
+	preCreateEvent := &models.Event{
+		OrganizerID:         req.OrganizerID,
+		TotalCapacity:       req.TotalCapacity,
+		HasDigitalTicketing: containsEcoName(ecoNames, "Paperless Ticketing"),
+		HasPaperlessCheckin: containsEcoName(ecoNames, "Digital Check-in"),
+	}
+	if req.EcoSummary != "" {
+		preCreateEvent.EcoSummary = &req.EcoSummary
+	}
+	metrics := service.CalculateGreenMetrics(preCreateEvent, selectedVenue, ecoNames)
 
-	event, err := h.eventRepo.Create(ctx, &req, greenResult.IsGreen)
+	event, err := h.eventRepo.Create(ctx, &req, metrics.IsEcoFriendly)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create event: " + err.Error()})
 		return
 	}
+	metrics.EventID = event.ID
 
 	resp := models.CreateEventResponse{
-		Event:           *event,
-		IsGreen:         greenResult.IsGreen,
-		GreenCriteria:   greenResult.CriteriaMet,
-		NotGreenReasons: greenResult.CriteriaNotMet,
+		Event:               *event,
+		IsGreen:             metrics.IsEcoFriendly,
+		SustainabilityScore: metrics.OverallSustainabilityScore,
+		Metrics:             metrics,
+		GreenCriteria: append(greenResult.CriteriaMet,
+			fmt.Sprintf("Overall sustainability score: %.2f/100", metrics.OverallSustainabilityScore)),
+		NotGreenReasons: append(greenResult.CriteriaNotMet, func() []string {
+			if metrics.IsEcoFriendly {
+				return nil
+			}
+			return []string{fmt.Sprintf("Overall score %.2f is below eco-friendly threshold %.0f", metrics.OverallSustainabilityScore, models.EcoFriendlyThreshold)}
+		}()...),
 		CalendarICSPath: "/api/v1/events/" + event.ID.String() + "/calendar.ics",
 	}
 
@@ -340,4 +360,56 @@ func (h *EventHandler) ListEcoAttributes(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, attrs)
+}
+
+func (h *EventHandler) GetEventGreenMetrics(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+	ctx := c.Request.Context()
+	event, err := h.eventRepo.GetByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load event"})
+		return
+	}
+	if !isEventPubliclyListed(event) {
+		uid, ok := authUserID(c)
+		if !ok || event.OrganizerID != uid {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+			return
+		}
+	}
+
+	var venue *models.Venue
+	if event.VenueID != nil {
+		if v, err := h.venueRepo.GetByID(ctx, *event.VenueID); err == nil {
+			venue = v
+		}
+	}
+	ecoNames, err := h.eventRepo.GetEcoAttributeNamesByEventID(ctx, event.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch eco attributes"})
+		return
+	}
+	metrics := service.CalculateGreenMetrics(event, venue, ecoNames)
+	if err := metrics.Validate(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Metrics validation failed: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, metrics)
+}
+
+func containsEcoName(names []string, target string) bool {
+	for _, name := range names {
+		if name == target {
+			return true
+		}
+	}
+	return false
 }
