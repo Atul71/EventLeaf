@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 type Config struct {
@@ -32,7 +33,8 @@ func Load() *Config {
 		AppPort:    getEnv("APP_PORT", "3000"),
 		JWTSecret:  getEnv("JWT_SECRET", "dev-insecure-secret-change-me"),
 		AuthCookieName: getEnv("AUTH_COOKIE_NAME", "eventleaf_session"),
-		AuthCookieSecure: getEnv("AUTH_COOKIE_SECURE", "true") != "false",
+		// Default false so http://localhost dev (Vite + API) receives the session cookie; set true behind HTTPS in production.
+		AuthCookieSecure: strings.EqualFold(getEnv("AUTH_COOKIE_SECURE", "false"), "true"),
 		GoogleClientID:         getEnv("GOOGLE_CLIENT_ID", ""),
 		GoogleClientSecret:     getEnv("GOOGLE_CLIENT_SECRET", ""),
 		GoogleRefreshToken:     getEnv("GOOGLE_REFRESH_TOKEN", ""),
