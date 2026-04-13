@@ -65,7 +65,6 @@ type UpdateUserProfileInput struct {
 	ProfileImageURL *string
 	IsEcoConscious bool
 }
-
 func (r *UserRepository) GetAuthUserByEmail(ctx context.Context, email string) (*AuthUser, error) {
 	var u AuthUser
 	err := r.db.Pool.QueryRow(ctx,
