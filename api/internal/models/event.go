@@ -49,8 +49,10 @@ type Event struct {
 }
 
 type CreateEventResponse struct {
-	Event           Event    `json:"event"`
-	IsGreen         bool     `json:"is_green"`
-	GreenCriteria   []string `json:"green_criteria_met,omitempty"`
-	NotGreenReasons []string `json:"green_criteria_not_met,omitempty"`
+	Event               Event         `json:"event"`
+	IsGreen             bool          `json:"is_green"`
+	SustainabilityScore float64       `json:"sustainability_score"`
+	Metrics             *GreenMetrics `json:"metrics,omitempty"`
+	GreenCriteria       []string      `json:"green_criteria_met,omitempty"`
+	NotGreenReasons     []string      `json:"green_criteria_not_met,omitempty"`
 }
