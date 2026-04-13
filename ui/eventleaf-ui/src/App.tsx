@@ -3,6 +3,7 @@ import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { EditProfilePage } from "./pages/EditProfilePage";
 import { OrganizerDashboardPage } from "./pages/OrganizerDashboardPage";
 import { VenueBrowserPage } from "./pages/VenueBrowserPage";
 import { OrganizerPlaceholderPage } from "./pages/OrganizerPlaceholderPage";
@@ -18,6 +19,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile/edit" element={<EditProfilePage />} />
         <Route path="/organizer" element={<OrganizerDashboardPage />} />
         <Route path="/organizer/venues" element={<VenueBrowserPage />} />
         <Route path="/events" element={<DiscoverEventsPage />} />

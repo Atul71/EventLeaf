@@ -38,11 +38,11 @@ type loginRequest struct {
 }
 
 type signupRequest struct {
-	Username      string `json:"username" binding:"required"`
-	Email         string `json:"email" binding:"required"`
-	Password      string `json:"password" binding:"required"`
-	IsOrganizer   bool   `json:"is_organizer"`
-	IsEcoConscious bool  `json:"is_eco_conscious"`
+	Username       string `json:"username" binding:"required"`
+	Email          string `json:"email" binding:"required"`
+	Password       string `json:"password" binding:"required"`
+	IsOrganizer    bool   `json:"is_organizer"`
+	IsEcoConscious bool   `json:"is_eco_conscious"`
 }
 
 type updateMeRequest struct {
@@ -52,6 +52,71 @@ type updateMeRequest struct {
 	Bio             *string `json:"bio"`
 	ProfileImageURL *string `json:"profile_image_url"`
 	IsEcoConscious  *bool   `json:"is_eco_conscious"`
+}
+
+func authUserIDFromContext(c *gin.Context) (uuid.UUID, bool) {
+	uidRaw, ok := c.Get(middleware.ContextUserIDKey)
+	if !ok {
+		return uuid.Nil, false
+	}
+	switch v := uidRaw.(type) {
+	case uuid.UUID:
+		return v, true
+	case string:
+		parsed, err := uuid.Parse(v)
+		if err != nil {
+			return uuid.Nil, false
+		}
+		return parsed, true
+	default:
+		return uuid.Nil, false
+	}
+}
+
+func (h *AuthHandler) resolveAuthUserID(c *gin.Context) (uuid.UUID, error) {
+	if id, ok := authUserIDFromContext(c); ok {
+		return id, nil
+	}
+	emailRaw, ok := c.Get(middleware.ContextUserEmailKey)
+	if !ok {
+		return uuid.Nil, errors.New("missing auth context")
+	}
+	email, ok := emailRaw.(string)
+	if !ok || strings.TrimSpace(email) == "" {
+		return uuid.Nil, errors.New("invalid auth context")
+	}
+	u, err := h.users.GetAuthUserByEmail(c.Request.Context(), strings.TrimSpace(email))
+	if err != nil {
+		// Fall through to raw-cookie parse fallback below.
+	} else {
+		return u.ID, nil
+	}
+
+	// Last-resort fallback for legacy session cookies where middleware context is incomplete.
+	cookie, cookieErr := c.Request.Cookie(h.cookieName)
+	if cookieErr != nil || cookie == nil || cookie.Value == "" {
+		return uuid.Nil, errors.New("invalid auth context")
+	}
+	claims, parseErr := auth.ParseToken(h.jwtSecret, cookie.Value)
+	if parseErr != nil {
+		return uuid.Nil, parseErr
+	}
+	if claims.UserID != "" {
+		if parsed, parseUUIDErr := uuid.Parse(claims.UserID); parseUUIDErr == nil {
+			return parsed, nil
+		}
+	}
+	if strings.TrimSpace(claims.Subject) != "" {
+		if parsed, parseUUIDErr := uuid.Parse(strings.TrimSpace(claims.Subject)); parseUUIDErr == nil {
+			return parsed, nil
+		}
+	}
+	if strings.TrimSpace(claims.Email) != "" {
+		if byEmail, byEmailErr := h.users.GetAuthUserByEmail(c.Request.Context(), strings.TrimSpace(claims.Email)); byEmailErr == nil {
+			return byEmail.ID, nil
+		}
+	}
+	return uuid.Nil, errors.New("invalid auth context")
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
@@ -190,25 +255,34 @@ func (h *AuthHandler) Signup(c *gin.Context) {
 	})
 }
 
-
 func (h *AuthHandler) Me(c *gin.Context) {
-	uid, _ := c.Get(middleware.ContextUserIDKey)
-	emailRaw, _ := c.Get(middleware.ContextUserEmailKey)
-	email, _ := emailRaw.(string)
-
-	username := ""
-	isOrganizer := false
-	if email != "" {
-		if u, err := h.users.GetAuthUserByEmail(c.Request.Context(), email); err == nil && u != nil {
-			username = u.Username
-			isOrganizer = u.IsOrganizer
-		}
+	userID, err := h.resolveAuthUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid auth context"})
+		return
 	}
+
+	profile, err := h.users.GetProfileByID(c.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load profile"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"user_id":      uid,
-		"email":        email,
-		"username":     username,
-		"is_organizer": isOrganizer,
+		"user_id":           profile.ID,
+		"email":             profile.Email,
+		"username":          profile.Username,
+		"first_name":        profile.FirstName,
+		"last_name":         profile.LastName,
+		"phone":             profile.Phone,
+		"bio":               profile.Bio,
+		"profile_image_url": profile.ProfileImageURL,
+		"is_organizer":      profile.IsOrganizer,
+		"is_eco_conscious":  profile.IsEcoConscious,
 	})
 }
 
@@ -219,13 +293,8 @@ func (h *AuthHandler) UpdateMe(c *gin.Context) {
 		return
 	}
 
-	uidRaw, ok := c.Get(middleware.ContextUserIDKey)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing auth context"})
-		return
-	}
-	userID, ok := uidRaw.(uuid.UUID)
-	if !ok {
+	userID, err := h.resolveAuthUserID(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid auth context"})
 		return
 	}
@@ -323,16 +392,16 @@ func (h *AuthHandler) UpdateMe(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"user_id":          updated.ID,
-		"username":         updated.Username,
-		"email":            updated.Email,
-		"first_name":       updated.FirstName,
-		"last_name":        updated.LastName,
-		"phone":            updated.Phone,
-		"bio":              updated.Bio,
+		"user_id":           updated.ID,
+		"username":          updated.Username,
+		"email":             updated.Email,
+		"first_name":        updated.FirstName,
+		"last_name":         updated.LastName,
+		"phone":             updated.Phone,
+		"bio":               updated.Bio,
 		"profile_image_url": updated.ProfileImageURL,
-		"is_organizer":     updated.IsOrganizer,
-		"is_eco_conscious": updated.IsEcoConscious,
+		"is_organizer":      updated.IsOrganizer,
+		"is_eco_conscious":  updated.IsEcoConscious,
 	})
 }
 
@@ -340,4 +409,3 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	c.SetCookie(h.cookieName, "", -1, "/", "", h.cookieSecure, true)
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
-
