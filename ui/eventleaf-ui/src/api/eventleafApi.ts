@@ -141,7 +141,6 @@ export async function updateMyProfile(payload: UpdateMyProfilePayload): Promise<
   if (!res.ok) throw new Error(await parseError(res));
   return res.json() as Promise<UpdatedProfile>;
 }
-
 export async function logoutSession(): Promise<void> {
   const res = await fetch(`${API_PREFIX}/logout`, { method: "POST", credentials: "include" });
   if (!res.ok) throw new Error(await parseError(res));
