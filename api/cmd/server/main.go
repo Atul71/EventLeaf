@@ -98,6 +98,7 @@ func main() {
 	withOptionalAuth.Use(middleware.OptionalAuth(cfg.JWTSecret, cfg.AuthCookieName))
 	{
 		withOptionalAuth.GET("/events/:id", eventHandler.GetEvent)
+		withOptionalAuth.GET("/events/:id/metrics", eventHandler.GetEventGreenMetrics)
 		withOptionalAuth.GET("/events/:id/calendar.ics", eventHandler.GetEventCalendarICS)
 	}
 
