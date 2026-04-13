@@ -94,13 +94,52 @@ export type CurrentUser = {
   user_id: string;
   email: string;
   username?: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string | null;
+  bio?: string | null;
+  profile_image_url?: string | null;
   is_organizer?: boolean;
+  is_eco_conscious?: boolean;
+};
+
+export type UpdateMyProfilePayload = {
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  bio?: string;
+  profile_image_url?: string;
+  is_eco_conscious?: boolean;
+};
+
+export type UpdatedProfile = {
+  user_id: string;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone?: string | null;
+  bio?: string | null;
+  profile_image_url?: string | null;
+  is_organizer: boolean;
+  is_eco_conscious: boolean;
 };
 
 export async function fetchCurrentUser(): Promise<CurrentUser> {
   const res = await fetch(`${API_PREFIX}/me`, { credentials: "include" });
   if (!res.ok) throw new Error(await parseError(res));
   return res.json() as Promise<CurrentUser>;
+}
+
+export async function updateMyProfile(payload: UpdateMyProfilePayload): Promise<UpdatedProfile> {
+  const res = await fetch(`${API_PREFIX}/me`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json() as Promise<UpdatedProfile>;
 }
 
 export async function logoutSession(): Promise<void> {

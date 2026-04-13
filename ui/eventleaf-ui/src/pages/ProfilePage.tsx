@@ -101,7 +101,7 @@ export function ProfilePage() {
 
   const mockLinks = {
     createEvent: "/organizer/events",
-    editProfile: "#/profile/edit",
+    editProfile: "/profile/edit",
     shareImpact: "#/profile/share-impact",
     discover: "/events",
     impact: "#/impact",
