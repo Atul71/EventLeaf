@@ -8,6 +8,8 @@
     "dev:e2e": "vite --strictPort",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "vite preview",
     "cypress:run": "cypress run",
     "cypress:open": "cypress open"

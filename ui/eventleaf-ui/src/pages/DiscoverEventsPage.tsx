@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Logo } from "../components/Logo";
 import { EcoCertifiedBadge } from "../components/organizer/EcoCertifiedBadge";
-import { fetchPublishedEvents, type ApiEvent } from "../api/eventleafApi";
+import {
+  AUTH_SESSION_CHANGED_EVENT,
+  fetchPublishedEvents,
+  saveEventById,
+  tryFetchSavedEventIds,
+  unsaveEventById,
+  type ApiEvent,
+} from "../api/eventleafApi";
 import {
   certificationsFromApi,
   compactAgenda,
@@ -67,9 +74,13 @@ function isEventInDateRange(e: ApiEvent, range: DateRangeOption): boolean {
 }
 
 export function DiscoverEventsPage() {
+  const navigate = useNavigate();
   const [events, setEvents] = useState<ApiEvent[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set());
+  const [saveToggleBusy, setSaveToggleBusy] = useState<string | null>(null);
+  const [saveHint, setSaveHint] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("All Types");
@@ -107,6 +118,34 @@ export function DiscoverEventsPage() {
       });
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (import.meta.env.MODE === "test") {
+      return;
+    }
+    let cancelled = false;
+    const load = () => {
+      tryFetchSavedEventIds()
+        .then((ids) => {
+          if (cancelled) return;
+          if (ids === null) {
+            setSavedIds(new Set());
+          } else {
+            setSavedIds(new Set(ids));
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setSavedIds(new Set());
+        });
+    };
+    load();
+    const onAuthChange = () => load();
+    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, onAuthChange);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, onAuthChange);
     };
   }, []);
 
@@ -216,6 +255,15 @@ export function DiscoverEventsPage() {
         {loadError && (
           <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800/40 dark:bg-amber-950/30 dark:text-amber-100">
             <strong className="font-bold">Could not load events:</strong> {loadError}.
+          </div>
+        )}
+
+        {saveHint && (
+          <div
+            className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-950 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-100"
+            role="status"
+          >
+            <strong className="font-bold">Save failed:</strong> {saveHint}
           </div>
         )}
 
@@ -447,6 +495,54 @@ export function DiscoverEventsPage() {
               >
                 <div className="relative h-52 shrink-0">
                   <img src={hero} alt={event.title} className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    disabled={saveToggleBusy === event.id}
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const isSaved = savedIds.has(event.id);
+                      setSaveToggleBusy(event.id);
+                      setSaveHint(null);
+                      try {
+                        if (isSaved) {
+                          await unsaveEventById(event.id);
+                          setSavedIds((prev) => {
+                            const next = new Set(prev);
+                            next.delete(event.id);
+                            return next;
+                          });
+                        } else {
+                          await saveEventById(event.id);
+                          setSavedIds((prev) => new Set(prev).add(event.id));
+                        }
+                        const idsAfter = await tryFetchSavedEventIds();
+                        if (idsAfter !== null) {
+                          setSavedIds(new Set(idsAfter));
+                        }
+                      } catch (err) {
+                        const msg = err instanceof Error ? err.message : "Something went wrong";
+                        if (msg === "Not signed in") {
+                          navigate("/login");
+                        } else {
+                          setSaveHint(msg);
+                          window.setTimeout(() => setSaveHint(null), 8000);
+                        }
+                      } finally {
+                        setSaveToggleBusy(null);
+                      }
+                    }}
+                    className="absolute top-3 right-3 flex size-11 items-center justify-center rounded-full border border-white/50 bg-black/40 text-white backdrop-blur-sm transition-all hover:bg-black/55 disabled:opacity-50"
+                    aria-label={savedIds.has(event.id) ? "Remove from saved" : "Save event"}
+                    title={savedIds.has(event.id) ? "Remove from saved" : "Save to profile (sign in if prompted)"}
+                  >
+                    <span
+                      className={`material-symbols-outlined text-2xl ${savedIds.has(event.id) ? "text-red-300" : ""}`}
+                      style={{ fontVariationSettings: savedIds.has(event.id) ? "'FILL' 1" : "'FILL' 0" }}
+                    >
+                      favorite
+                    </span>
+                  </button>
                   {event.is_eco_friendly ? (
                     <EcoCertifiedBadge variant="card" className="absolute top-3 left-3">
                       Eco-Certified Event

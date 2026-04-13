@@ -234,6 +234,34 @@ func (r *EventRepository) ListByOrganizer(ctx context.Context, organizerID uuid.
 	return out, rows.Err()
 }
 
+// ListSavedByUser returns published public events the user bookmarked (newest save first).
+func (r *EventRepository) ListSavedByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Event, error) {
+	rows, err := r.db.Pool.Query(ctx,
+		`SELECT `+eventJoinSelect+`
+		FROM user_favorites uf
+		INNER JOIN events e ON e.id = uf.event_id
+		LEFT JOIN venues v ON v.id = e.venue_id
+		WHERE uf.user_id = $1 AND e.status = 'published' AND e.visibility = 'public'
+		ORDER BY uf.created_at DESC
+		LIMIT $2 OFFSET $3`,
+		userID, limit, offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []models.Event
+	for rows.Next() {
+		ev, err := scanEventJoined(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *ev)
+	}
+	return out, rows.Err()
+}
+
 // PublishForOrganizer sets status to published for the organizer's event (idempotent if already published).
 func (r *EventRepository) PublishForOrganizer(ctx context.Context, eventID, organizerID uuid.UUID) (*models.Event, error) {
 	cmd, err := r.db.Pool.Exec(ctx,
