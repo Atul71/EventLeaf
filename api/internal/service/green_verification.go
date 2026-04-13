@@ -70,8 +70,6 @@ func VerifyGreenCriteria(
 	return result
 }
 
-// CalculateGreenMetrics computes a weighted sustainability score (0-100).
-// The overall score is an average of energy, waste, and transportation components.
 func CalculateGreenMetrics(
 	event *models.Event,
 	venue *models.Venue,
@@ -117,7 +115,6 @@ func calculateEnergyEfficiencyScore(event *models.Event, venue *models.Venue, br
 
 func calculateWasteReductionScore(event *models.Event, selectedEcoAttributeNames []string) float64 {
 	score := 0.0
-
 	if event.HasDigitalTicketing {
 		score += 20
 	}
@@ -139,13 +136,11 @@ func calculateWasteReductionScore(event *models.Event, selectedEcoAttributeNames
 			score += 3
 		}
 	}
-
 	return clampScore(score)
 }
 
 func calculateTransportationScore(venue *models.Venue, selectedEcoAttributeNames []string, breakdown *models.MetricsDetails) float64 {
 	score := 0.0
-
 	if venue != nil && venue.HasPublicTransit {
 		score += 55
 		breakdown.PublicTransitAccessScore = 55
@@ -158,7 +153,6 @@ func calculateTransportationScore(venue *models.Venue, selectedEcoAttributeNames
 			score += 35
 		}
 	}
-
 	return clampScore(score)
 }
 
@@ -172,7 +166,6 @@ func calculateCarbonReductionEstimate(overallScore float64, attendeeCount int) f
 
 func generateSustainabilityTips(metrics *models.GreenMetrics, venue *models.Venue) []string {
 	tips := []string{}
-
 	if metrics.EnergyEfficiencyScore < 70 {
 		tips = append(tips, "Adopt fully digital ticketing and check-in workflows.")
 	}
@@ -185,7 +178,6 @@ func generateSustainabilityTips(metrics *models.GreenMetrics, venue *models.Venu
 	if venue != nil && !venue.IsEcoCertified {
 		tips = append(tips, "Consider partnering with an eco-certified venue.")
 	}
-
 	return tips
 }
 

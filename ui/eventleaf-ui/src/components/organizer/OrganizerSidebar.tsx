@@ -20,7 +20,10 @@ export function OrganizerSidebar() {
       </div>
       <nav className="flex-1 px-4 py-4 space-y-1">
         {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
+          const isActive =
+            item.path === "/organizer/events"
+              ? location.pathname.startsWith("/organizer/events")
+              : location.pathname === item.path;
           return (
             <Link
               key={item.path}
@@ -61,7 +64,6 @@ export function OrganizerSidebar() {
             <p className="text-sm font-bold truncate text-text-leaf dark:text-white">
               Green Horizon Co.
             </p>
-            <p className="text-xs text-subtext-leaf truncate">Pro Plan · Click to view profile</p>
           </div>
         </Link>
       </div>

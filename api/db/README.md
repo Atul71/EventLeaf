@@ -43,8 +43,8 @@ Sample development data automatically loaded on database initialization:
 
 **Sample Data:**
 - 5 users (4 with defined roles + 1 admin)
-- 3 venues (2 eco-certified, 1 without certification)
-- 3 events (2 eco-friendly, 1 conventional)
+- 3 Gainesville anchor venues plus ~30 additional demo venues (BE-102–style names + extras; mix of eco-certified and standard)
+- Many published demo events (original 3 plus ~35 city/venue variety for Discover)
 - 2 sample tickets
 - Eco-attribute associations
 
@@ -55,15 +55,39 @@ This data is useful for:
 
 ## Auto-Loading During Docker Initialization
 
-The Docker Compose configuration automatically loads these files in order:
+The Docker Compose configuration (`api/docker-compose.yml`) automatically loads these files in order:
 
-1. `schema.sql` - Creates all database structure
-2. `seed.sql` - Inserts sample data
+1. `schema.sql` - Creates all database structure (includes `eco_attributes` rows)
+2. `seed.sql` - Inserts sample users, **3 venues**, sample events, and tickets
 
-This happens automatically when you run:
+This runs **once** when the Postgres data volume is first created. Start the stack from the `api/` folder:
+
 ```bash
-docker-compose up
+docker compose up -d
 ```
+
+### Venues missing or seed never ran?
+
+If `GET /api/v1/venues` returns `[]` but the API connects OK, apply the seed against the running container:
+
+```bash
+# macOS / Linux (from api/)
+chmod +x scripts/apply-seed.sh && ./scripts/apply-seed.sh
+```
+
+```powershell
+# Windows PowerShell (from api/)
+.\scripts\apply-seed.ps1
+```
+
+To **reset everything** (wipes data) and re-run schema + seed on next start:
+
+```bash
+docker compose down -v
+docker compose up -d
+```
+
+Ensure your Go app `.env` uses the same `DB_PORT` as the host port mapped in Compose. On Windows, if **another PostgreSQL** is installed, it often uses **5432**; use **`DB_PORT=5433`** in `.env` and recreate Compose so Docker maps **5433→5432** (see repo root `.env.example`).
 
 ## Creating Backups
 
