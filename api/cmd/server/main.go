@@ -106,6 +106,7 @@ func main() {
 	protected.Use(middleware.RequireAuth(cfg.JWTSecret, cfg.AuthCookieName))
 	{
 		protected.GET("/me", authHandler.Me)
+		protected.PATCH("/me", authHandler.UpdateMe)
 		protected.GET("/me/saved-events", favoriteHandler.ListSavedEvents)
 		protected.GET("/me/saved-event-ids", favoriteHandler.ListSavedEventIDs)
 		protected.POST("/me/saved-events/:eventId", favoriteHandler.AddSavedEvent)

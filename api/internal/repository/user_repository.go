@@ -44,6 +44,28 @@ type AuthUser struct {
 	IsOrganizer  bool
 }
 
+type UserProfile struct {
+	ID             uuid.UUID
+	Username       string
+	Email          string
+	FirstName      string
+	LastName       string
+	Phone          *string
+	Bio            *string
+	ProfileImageURL *string
+	IsOrganizer    bool
+	IsEcoConscious bool
+}
+
+type UpdateUserProfileInput struct {
+	FirstName      string
+	LastName       string
+	Phone          *string
+	Bio            *string
+	ProfileImageURL *string
+	IsEcoConscious bool
+}
+
 func (r *UserRepository) GetAuthUserByEmail(ctx context.Context, email string) (*AuthUser, error) {
 	var u AuthUser
 	err := r.db.Pool.QueryRow(ctx,
@@ -78,4 +100,70 @@ func (r *UserRepository) CreateUser(ctx context.Context, input CreateUserInput) 
 		return nil, err
 	}
 	return &u, nil
+}
+
+func (r *UserRepository) GetProfileByID(ctx context.Context, userID uuid.UUID) (*UserProfile, error) {
+	var p UserProfile
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT id, username, email, first_name, last_name, phone, bio, profile_image_url,
+		       COALESCE(is_organizer, false), COALESCE(is_eco_conscious, false)
+		FROM users
+		WHERE id = $1
+	`,
+		userID,
+	).Scan(
+		&p.ID,
+		&p.Username,
+		&p.Email,
+		&p.FirstName,
+		&p.LastName,
+		&p.Phone,
+		&p.Bio,
+		&p.ProfileImageURL,
+		&p.IsOrganizer,
+		&p.IsEcoConscious,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+func (r *UserRepository) UpdateProfileByID(ctx context.Context, userID uuid.UUID, input UpdateUserProfileInput) (*UserProfile, error) {
+	var p UserProfile
+	err := r.db.Pool.QueryRow(ctx, `
+		UPDATE users
+		SET first_name = $2,
+		    last_name = $3,
+		    phone = $4,
+		    bio = $5,
+		    profile_image_url = $6,
+		    is_eco_conscious = $7
+		WHERE id = $1
+		RETURNING id, username, email, first_name, last_name, phone, bio, profile_image_url,
+		          COALESCE(is_organizer, false), COALESCE(is_eco_conscious, false)
+	`,
+		userID,
+		input.FirstName,
+		input.LastName,
+		input.Phone,
+		input.Bio,
+		input.ProfileImageURL,
+		input.IsEcoConscious,
+	).Scan(
+		&p.ID,
+		&p.Username,
+		&p.Email,
+		&p.FirstName,
+		&p.LastName,
+		&p.Phone,
+		&p.Bio,
+		&p.ProfileImageURL,
+		&p.IsOrganizer,
+		&p.IsEcoConscious,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
 }
