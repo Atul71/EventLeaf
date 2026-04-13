@@ -140,6 +140,40 @@ export async function fetchPublishedEvents(limit = 100): Promise<ApiEvent[]> {
   return res.json() as Promise<ApiEvent[]>;
 }
 
+/** Signed-in user's saved events (published list shape, same as Discover). */
+export async function fetchSavedEvents(limit = 200): Promise<ApiEvent[]> {
+  const res = await fetch(`${API_PREFIX}/me/saved-events?limit=${limit}&offset=0`, { credentials: "include" });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json() as Promise<ApiEvent[]>;
+}
+
+/** `null` = not signed in; otherwise favorited event IDs (may be empty). */
+export async function tryFetchSavedEventIds(): Promise<string[] | null> {
+  const res = await fetch(`${API_PREFIX}/me/saved-event-ids`, { credentials: "include" });
+  if (res.status === 401) return null;
+  if (!res.ok) throw new Error(await parseError(res));
+  const data = (await res.json()) as { event_ids?: string[] };
+  return data.event_ids ?? [];
+}
+
+export async function saveEventById(id: string): Promise<void> {
+  const res = await fetch(`${API_PREFIX}/me/saved-events/${encodeURIComponent(id)}`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (res.status === 401) throw new Error("Not signed in");
+  if (!res.ok) throw new Error(await parseError(res));
+}
+
+export async function unsaveEventById(id: string): Promise<void> {
+  const res = await fetch(`${API_PREFIX}/me/saved-events/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (res.status === 401) throw new Error("Not signed in");
+  if (!res.ok) throw new Error(await parseError(res));
+}
+
 /** All events for the signed-in organizer (drafts and published). Tries `/organizer/events` then `/me/events`. */
 export async function fetchMyEvents(limit = 200): Promise<ApiEvent[]> {
   const qs = `limit=${limit}&offset=0`;

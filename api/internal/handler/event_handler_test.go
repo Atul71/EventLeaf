@@ -16,9 +16,10 @@ import (
 )
 
 type fakeEventRepo struct {
-	createFn func(ctx context.Context, req *models.CreateEventRequest, green bool) (*models.Event, error)
-	getFn    func(ctx context.Context, id uuid.UUID) (*models.Event, error)
-	listFn   func(ctx context.Context, limit, offset int) ([]models.Event, error)
+	createFn    func(ctx context.Context, req *models.CreateEventRequest, green bool) (*models.Event, error)
+	getFn       func(ctx context.Context, id uuid.UUID) (*models.Event, error)
+	listFn      func(ctx context.Context, limit, offset int) ([]models.Event, error)
+	listSavedFn func(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Event, error)
 }
 
 func (f *fakeEventRepo) Create(ctx context.Context, req *models.CreateEventRequest, isEcoFriendly bool) (*models.Event, error) {
@@ -48,6 +49,13 @@ func (f *fakeEventRepo) ListByOrganizer(ctx context.Context, organizerID uuid.UU
 
 func (f *fakeEventRepo) PublishForOrganizer(ctx context.Context, eventID, organizerID uuid.UUID) (*models.Event, error) {
 	return nil, pgx.ErrNoRows
+}
+
+func (f *fakeEventRepo) ListSavedByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Event, error) {
+	if f.listSavedFn != nil {
+		return f.listSavedFn(ctx, userID, limit, offset)
+	}
+	return []models.Event{}, nil
 }
 
 type fakeVenueRepo struct {

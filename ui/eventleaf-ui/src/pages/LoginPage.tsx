@@ -52,7 +52,7 @@ export function LoginPage() {
                 setSubmitting(true);
                 try {
                   const fd = new FormData(e.currentTarget);
-                  const email = String(fd.get("email") ?? "");
+                  const email = String(fd.get("email") ?? "").trim();
                   const password = String(fd.get("password") ?? "");
 
                   const res = await fetch("/api/v1/login", {
@@ -63,12 +63,12 @@ export function LoginPage() {
                   });
 
                   if (!res.ok) {
-                    let msg = "Login failed";
+                    let msg = `Could not reach server (${res.status})`;
                     try {
                       const data = (await res.json()) as { error?: string };
                       if (data?.error) msg = data.error;
                     } catch {
-                      /* ignore */
+                      if (res.status === 401 || res.status === 400) msg = "Invalid email or password";
                     }
                     setSubmitError(msg);
                     return;
@@ -87,6 +87,8 @@ export function LoginPage() {
                   }
                   notifyAuthSessionChanged();
                   navigate(path);
+                } catch {
+                  setSubmitError("Network error — is the API running on port 3000?");
                 } finally {
                   setSubmitting(false);
                 }
@@ -114,7 +116,8 @@ export function LoginPage() {
                     name="email"
                     placeholder="name@company.com or username"
                     required
-                    type="email"
+                    type="text"
+                    autoComplete="username"
                   />
                 </div>
               </div>
@@ -159,6 +162,11 @@ export function LoginPage() {
                 {submitting ? "Signing In…" : "Sign In"}
                 <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
               </button>
+              <p className="text-xs text-subtext-leaf dark:text-white/50 leading-relaxed">
+                Local dev with seeded DB: use <span className="font-mono text-text-leaf/90 dark:text-white/70">demo@login.com</span> and
+                password <span className="font-mono text-text-leaf/90 dark:text-white/70">password</span> — or re-run{" "}
+                <span className="font-mono">api/scripts/apply-seed.sh</span> so seed users get real password hashes.
+              </p>
             </form>
             <div className="space-y-6">
               <div className="relative">
