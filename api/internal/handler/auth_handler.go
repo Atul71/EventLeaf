@@ -343,8 +343,9 @@ func (h *AuthHandler) UpdateMe(c *gin.Context) {
 		if trimmed == "" {
 			phone = nil
 		} else {
-			if len(trimmed) > 20 {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "phone must be 20 characters or fewer"})
+			validPhone := regexp.MustCompile(`^\d{10}$`)
+			if !validPhone.MatchString(trimmed) {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "phone must be exactly 10 digits"})
 				return
 			}
 			phone = &trimmed
