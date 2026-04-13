@@ -1,14 +1,14 @@
 -- EventLeaf Sample Data for Development
 -- This file contains sample data for testing and development purposes
 
--- Insert sample users
+-- Insert sample users (bcrypt for plaintext password: password — same as demo@login.com)
 INSERT INTO users (username, email, password_hash, first_name, last_name, is_organizer, is_eco_conscious, bio)
 VALUES 
-    ('johnorganizer', 'john.organizer@eventleaf.com', '$2b$10$dummyhash1', 'John', 'Organizer', true, true, 'Passionate event organizer focused on sustainability'),
-    ('janeattendee', 'jane.attendee@eventleaf.com', '$2b$10$dummyhash2', 'Jane', 'Attendee', false, true, 'Eco-conscious event enthusiast'),
-    ('boborganizer', 'bob.organizer@eventleaf.com', '$2b$10$dummyhash3', 'Bob', 'Manager', true, false, 'Professional event manager'),
-    ('aliceattendee', 'alice.attendee@eventleaf.com', '$2b$10$dummyhash4', 'Alice', 'Smith', false, true, 'Love attending eco-friendly events'),
-    ('charlieadmin', 'charlie.admin@eventleaf.com', '$2b$10$dummyhash5', 'Charlie', 'Admin', true, true, 'Platform administrator')
+    ('johnorganizer', 'john.organizer@eventleaf.com', '$2a$10$AR/ItrRQlMDqxZe4ZLZhuucXbcFaf2bQFo9M7.icQQkGlrtIf3Fby', 'John', 'Organizer', true, true, 'Passionate event organizer focused on sustainability'),
+    ('janeattendee', 'jane.attendee@eventleaf.com', '$2a$10$AR/ItrRQlMDqxZe4ZLZhuucXbcFaf2bQFo9M7.icQQkGlrtIf3Fby', 'Jane', 'Attendee', false, true, 'Eco-conscious event enthusiast'),
+    ('boborganizer', 'bob.organizer@eventleaf.com', '$2a$10$AR/ItrRQlMDqxZe4ZLZhuucXbcFaf2bQFo9M7.icQQkGlrtIf3Fby', 'Bob', 'Manager', true, false, 'Professional event manager'),
+    ('aliceattendee', 'alice.attendee@eventleaf.com', '$2a$10$AR/ItrRQlMDqxZe4ZLZhuucXbcFaf2bQFo9M7.icQQkGlrtIf3Fby', 'Alice', 'Smith', false, true, 'Love attending eco-friendly events'),
+    ('charlieadmin', 'charlie.admin@eventleaf.com', '$2a$10$AR/ItrRQlMDqxZe4ZLZhuucXbcFaf2bQFo9M7.icQQkGlrtIf3Fby', 'Charlie', 'Admin', true, true, 'Platform administrator')
 ON CONFLICT (email) DO NOTHING;
 
 -- Insert sample venues
@@ -330,7 +330,7 @@ INSERT INTO users (username, email, password_hash, first_name, last_name, is_org
 VALUES (
     'demouser',
     'demo@login.com',
-    '$2a$10$AGYEHdFAFySltJc6l5QcsenFWHkSUW0C/ZC/idD2TXaEJucoEy/By',
+    '$2a$10$AR/ItrRQlMDqxZe4ZLZhuucXbcFaf2bQFo9M7.icQQkGlrtIf3Fby',
     'Demo',
     'User',
     true,
@@ -342,3 +342,14 @@ ON CONFLICT (email) DO UPDATE SET
     password_hash = EXCLUDED.password_hash,
     first_name = EXCLUDED.first_name,
     last_name = EXCLUDED.last_name;
+
+-- Fix logins if this DB was created with old placeholder password_hash values (password for all listed: password).
+UPDATE users SET password_hash = '$2a$10$AR/ItrRQlMDqxZe4ZLZhuucXbcFaf2bQFo9M7.icQQkGlrtIf3Fby'
+WHERE email IN (
+    'john.organizer@eventleaf.com',
+    'jane.attendee@eventleaf.com',
+    'bob.organizer@eventleaf.com',
+    'alice.attendee@eventleaf.com',
+    'charlie.admin@eventleaf.com',
+    'demo@login.com'
+);

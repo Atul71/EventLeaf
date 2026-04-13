@@ -61,6 +61,8 @@ func main() {
 		log.Fatalf("Failed to initialize Google Calendar service: %v", err)
 	}
 	eventHandler := handler.NewEventHandler(eventRepo, venueRepo, ecoAttrRepo, googleCalendarSvc, cfg.GoogleCalendarTimeZone)
+	favoriteRepo := repository.NewFavoriteRepository(database)
+	favoriteHandler := handler.NewFavoriteHandler(favoriteRepo, eventRepo)
 	venueHandler := handler.NewVenueHandler(venueRepo)
 	bootstrapHandler := handler.NewBootstrapHandler(userRepo)
 	authHandler := handler.NewAuthHandler(userRepo, cfg.JWTSecret, cfg.AuthCookieName, cfg.AuthCookieSecure)
@@ -103,6 +105,10 @@ func main() {
 	protected.Use(middleware.RequireAuth(cfg.JWTSecret, cfg.AuthCookieName))
 	{
 		protected.GET("/me", authHandler.Me)
+		protected.GET("/me/saved-events", favoriteHandler.ListSavedEvents)
+		protected.GET("/me/saved-event-ids", favoriteHandler.ListSavedEventIDs)
+		protected.POST("/me/saved-events/:eventId", favoriteHandler.AddSavedEvent)
+		protected.DELETE("/me/saved-events/:eventId", favoriteHandler.RemoveSavedEvent)
 		// List all events for the signed-in organizer (draft + live). Alias for proxies/clients that prefer this path.
 		protected.GET("/organizer/events", eventHandler.ListMyEvents)
 		protected.GET("/me/events", eventHandler.ListMyEvents)

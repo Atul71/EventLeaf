@@ -7,6 +7,13 @@ import (
 	"github.com/google/uuid"
 )
 
+// FavoriteStore is persistence for user ↔ event bookmarks (saved events).
+type FavoriteStore interface {
+	Add(ctx context.Context, userID, eventID uuid.UUID) error
+	Remove(ctx context.Context, userID, eventID uuid.UUID) error
+	ListEventIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
+}
+
 // EventRepository is the subset of event persistence used by HTTP handlers.
 type EventRepository interface {
 	Create(ctx context.Context, req *models.CreateEventRequest, isEcoFriendly bool) (*models.Event, error)
@@ -17,6 +24,8 @@ type EventRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*models.Event, error)
 	// PublishForOrganizer sets status to published when the event belongs to the organizer.
 	PublishForOrganizer(ctx context.Context, eventID, organizerID uuid.UUID) (*models.Event, error)
+	// ListSavedByUser returns published public events bookmarked by the user.
+	ListSavedByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Event, error)
 }
 
 // VenueRepository is the subset of venue persistence used by HTTP handlers.

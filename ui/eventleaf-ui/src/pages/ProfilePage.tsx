@@ -9,6 +9,7 @@ import { GreenTimeline } from "../components/attendee/GreenTimeline";
 import { ImpactTrophyCase } from "../components/attendee/ImpactTrophyCase";
 import { TicketStubsGallery } from "../components/attendee/TicketStubsGallery";
 import { ShareImpactCardModal } from "../components/attendee/ShareImpactCardModal";
+import { fetchSavedEvents, unsaveEventById, type ApiEvent } from "../api/eventleafApi";
 
 const PROFILE_IMAGE =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuDnOzVJfB7xx40z1WVf-qoPjw7WUXx4Qt82hn5m8o31QBxf9XSxKObGW976MJyh05WZVAxF4nFTES2SQy5ZW6RVELPPHYf9zceW8S4ondIFtViysJ_q6xeonlaDMCM3ov3KNtrvkAG6MTDlJHlQ59H8NDjsE0SbqlH1kSTm6KO6m8rR9GbPyowmBagTxQq_rTiZjTjoi8aK6GqGiHBfm4x6cIyTd2PaNn6_tUEuwsHw6_eyPhgv4GknPeBCM8LS4tzVgiehfVv68g";
@@ -33,6 +34,9 @@ export function ProfilePage() {
   const [shareEvent, setShareEvent] = useState<PastGreenEvent | null>(null);
   const [viewer, setViewer] = useState<{ user_id: string; email: string; username?: string; is_organizer?: boolean } | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [savedEvents, setSavedEvents] = useState<ApiEvent[]>([]);
+  const [savedLoading, setSavedLoading] = useState(false);
+  const [savedError, setSavedError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +78,26 @@ export function ProfilePage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== "saved" || authLoading) return;
+    let cancelled = false;
+    setSavedLoading(true);
+    setSavedError(null);
+    fetchSavedEvents()
+      .then((data) => {
+        if (!cancelled) setSavedEvents(data);
+      })
+      .catch((e: Error) => {
+        if (!cancelled) setSavedError(e.message || "Could not load saved events");
+      })
+      .finally(() => {
+        if (!cancelled) setSavedLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, authLoading]);
 
   const mockLinks = {
     createEvent: "/organizer/events",
@@ -423,7 +447,7 @@ export function ProfilePage() {
                   className="w-full py-3 rounded-xl border-2 border-dashed border-border-leaf text-subtext-leaf font-semibold text-sm hover:bg-white dark:hover:bg-white/5 hover:border-primary transition-all flex items-center justify-center gap-2"
                 >
                   <span className="material-symbols-outlined text-lg">history</span>
-                  Open ticket stub archive ({impact?.ticketStubs.length ?? 3} saved)
+                  Open ticket stub archive ({impact?.ticketStubs.length ?? 3} stubs)
                 </button>
               </div>
             )}
@@ -441,7 +465,83 @@ export function ProfilePage() {
             )}
 
             {activeTab === "saved" && (
-              <div className="py-8 text-center text-subtext-leaf">Saved content (mock)</div>
+              <div className="space-y-4">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-text-leaf dark:text-white">Saved events</h3>
+                    <p className="text-sm text-subtext-leaf">
+                      Events you bookmarked from Discover. Save more from{" "}
+                      <Link to="/events" className="font-bold text-primary hover:underline">
+                        Discover
+                      </Link>
+                      .
+                    </p>
+                  </div>
+                </div>
+                {savedLoading ? (
+                  <p className="py-8 text-center text-subtext-leaf">Loading saved events…</p>
+                ) : savedError ? (
+                  <div
+                    role="alert"
+                    className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-950 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
+                  >
+                    {savedError}
+                  </div>
+                ) : savedEvents.length === 0 ? (
+                  <p className="py-8 text-center text-subtext-leaf">
+                    Nothing saved yet. Open{" "}
+                    <Link to="/events" className="font-bold text-primary hover:underline">
+                      Discover
+                    </Link>{" "}
+                    and tap the heart on a card.
+                  </p>
+                ) : (
+                  <ul className="space-y-3">
+                    {savedEvents.map((ev) => (
+                      <li
+                        key={ev.id}
+                        className="flex flex-col gap-3 rounded-xl border border-border-leaf bg-white p-4 shadow-sm dark:bg-[#1a2e1c] sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="min-w-0">
+                          <Link
+                            to={`/events/${ev.id}`}
+                            className="font-bold text-text-leaf dark:text-white hover:text-primary transition-colors"
+                          >
+                            {ev.title}
+                          </Link>
+                          <p className="text-sm text-subtext-leaf mt-1">
+                            {ev.event_date}
+                            {ev.venue_city ? ` · ${ev.venue_city}` : ""}
+                            {ev.venue_name ? ` · ${ev.venue_name}` : ""}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 gap-2">
+                          <Link
+                            to={`/events/${ev.id}`}
+                            className="inline-flex items-center justify-center rounded-lg border border-border-leaf px-3 py-2 text-sm font-bold hover:bg-soft-green transition-colors"
+                          >
+                            View
+                          </Link>
+                          <button
+                            type="button"
+                            className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-900 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
+                            onClick={async () => {
+                              try {
+                                await unsaveEventById(ev.id);
+                                setSavedEvents((prev) => prev.filter((x) => x.id !== ev.id));
+                              } catch {
+                                /* ignore */
+                              }
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             )}
             {activeTab === "settings" && (
               <div className="py-8 text-center text-subtext-leaf">Settings content (mock)</div>
