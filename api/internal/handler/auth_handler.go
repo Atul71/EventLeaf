@@ -11,6 +11,7 @@ import (
 	"github.com/Atul71/EventLeaf/api/internal/middleware"
 	"github.com/Atul71/EventLeaf/api/internal/repository"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -42,6 +43,15 @@ type signupRequest struct {
 	Password      string `json:"password" binding:"required"`
 	IsOrganizer   bool   `json:"is_organizer"`
 	IsEcoConscious bool  `json:"is_eco_conscious"`
+}
+
+type updateMeRequest struct {
+	FirstName       *string `json:"first_name"`
+	LastName        *string `json:"last_name"`
+	Phone           *string `json:"phone"`
+	Bio             *string `json:"bio"`
+	ProfileImageURL *string `json:"profile_image_url"`
+	IsEcoConscious  *bool   `json:"is_eco_conscious"`
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
@@ -199,6 +209,130 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		"email":        email,
 		"username":     username,
 		"is_organizer": isOrganizer,
+	})
+}
+
+func (h *AuthHandler) UpdateMe(c *gin.Context) {
+	var req updateMeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	uidRaw, ok := c.Get(middleware.ContextUserIDKey)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing auth context"})
+		return
+	}
+	userID, ok := uidRaw.(uuid.UUID)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid auth context"})
+		return
+	}
+
+	current, err := h.users.GetProfileByID(c.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load profile"})
+		return
+	}
+
+	firstName := current.FirstName
+	lastName := current.LastName
+	phone := current.Phone
+	bio := current.Bio
+	profileImageURL := current.ProfileImageURL
+	isEcoConscious := current.IsEcoConscious
+
+	if req.FirstName != nil {
+		firstName = strings.TrimSpace(*req.FirstName)
+		if firstName == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "first_name cannot be empty"})
+			return
+		}
+		if len(firstName) > 100 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "first_name must be 100 characters or fewer"})
+			return
+		}
+	}
+	if req.LastName != nil {
+		lastName = strings.TrimSpace(*req.LastName)
+		if lastName == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "last_name cannot be empty"})
+			return
+		}
+		if len(lastName) > 100 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "last_name must be 100 characters or fewer"})
+			return
+		}
+	}
+	if req.Phone != nil {
+		trimmed := strings.TrimSpace(*req.Phone)
+		if trimmed == "" {
+			phone = nil
+		} else {
+			if len(trimmed) > 20 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "phone must be 20 characters or fewer"})
+				return
+			}
+			phone = &trimmed
+		}
+	}
+	if req.Bio != nil {
+		trimmed := strings.TrimSpace(*req.Bio)
+		if trimmed == "" {
+			bio = nil
+		} else {
+			bio = &trimmed
+		}
+	}
+	if req.ProfileImageURL != nil {
+		trimmed := strings.TrimSpace(*req.ProfileImageURL)
+		if trimmed == "" {
+			profileImageURL = nil
+		} else {
+			if len(trimmed) > 500 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "profile_image_url must be 500 characters or fewer"})
+				return
+			}
+			profileImageURL = &trimmed
+		}
+	}
+	if req.IsEcoConscious != nil {
+		isEcoConscious = *req.IsEcoConscious
+	}
+
+	updated, err := h.users.UpdateProfileByID(c.Request.Context(), userID, repository.UpdateUserProfileInput{
+		FirstName:       firstName,
+		LastName:        lastName,
+		Phone:           phone,
+		Bio:             bio,
+		ProfileImageURL: profileImageURL,
+		IsEcoConscious:  isEcoConscious,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"user_id":          updated.ID,
+		"username":         updated.Username,
+		"email":            updated.Email,
+		"first_name":       updated.FirstName,
+		"last_name":        updated.LastName,
+		"phone":            updated.Phone,
+		"bio":              updated.Bio,
+		"profile_image_url": updated.ProfileImageURL,
+		"is_organizer":     updated.IsOrganizer,
+		"is_eco_conscious": updated.IsEcoConscious,
 	})
 }
 
