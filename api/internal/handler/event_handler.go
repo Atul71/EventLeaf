@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/Atul71/EventLeaf/api/internal/models"
 	"github.com/Atul71/EventLeaf/api/internal/repository"
 	"github.com/Atul71/EventLeaf/api/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type EventHandler struct {
@@ -47,12 +49,14 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
+	var err error
 
 	venueIsEcoCertified := true
 	venueIDProvided := req.VenueID != nil
+	var venue *models.Venue
 
 	if venueIDProvided {
-		venue, err := h.venueRepo.GetByID(ctx, *req.VenueID)
+		venue, err = h.venueRepo.GetByID(ctx, *req.VenueID)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Venue not found"})
 			return
@@ -71,18 +75,39 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 	}
 
 	greenResult := service.VerifyGreenCriteria(venueIsEcoCertified, venueIDProvided, ecoNames)
+	preCreateEvent := &models.Event{
+		TotalCapacity:       req.TotalCapacity,
+		HasDigitalTicketing: true,
+		HasPaperlessCheckin: true,
+	}
+	if req.EcoSummary != "" {
+		preCreateEvent.EcoSummary = &req.EcoSummary
+	}
+	metrics := service.CalculateGreenMetrics(preCreateEvent, venue, ecoNames)
 
-	event, err := h.eventRepo.Create(ctx, &req, greenResult.IsGreen)
+	isGreen := metrics.IsEcoFriendly
+
+	event, err := h.eventRepo.Create(ctx, &req, isGreen)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create event: " + err.Error()})
 		return
 	}
+	metrics.EventID = event.ID
+
+	notGreenReasons := append([]string{}, greenResult.CriteriaNotMet...)
+	if !metrics.IsEcoFriendly {
+		notGreenReasons = append(notGreenReasons,
+			fmt.Sprintf("Overall score %.2f is below eco-friendly threshold %.0f", metrics.OverallSustainabilityScore, models.EcoFriendlyThreshold))
+	}
 
 	c.JSON(http.StatusCreated, models.CreateEventResponse{
-		Event:           *event,
-		IsGreen:         greenResult.IsGreen,
-		GreenCriteria:   greenResult.CriteriaMet,
-		NotGreenReasons: greenResult.CriteriaNotMet,
+		Event:               *event,
+		IsGreen:             isGreen,
+		SustainabilityScore: metrics.OverallSustainabilityScore,
+		Metrics:             metrics,
+		GreenCriteria: append(greenResult.CriteriaMet,
+			fmt.Sprintf("Overall sustainability score: %.2f/100", metrics.OverallSustainabilityScore)),
+		NotGreenReasons: notGreenReasons,
 	})
 }
 
@@ -101,4 +126,53 @@ func (h *EventHandler) ListEcoAttributes(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, attrs)
+}
+
+// GetEventGreenMetrics godoc
+// @Summary      Get sustainability metrics for an event
+// @Description  Calculates weighted sustainability metrics and eco-friendly status for an existing event
+// @Tags         events
+// @Produce      json
+// @Param        id   path      string  true  "Event ID"
+// @Success      200   {object}  models.GreenMetrics
+// @Failure      400   {object}  map[string]string  "Invalid event ID"
+// @Failure      404   {object}  map[string]string  "Event not found"
+// @Failure      500   {object}  map[string]string  "Server error"
+// @Router       /events/{id}/metrics [get]
+func (h *EventHandler) GetEventGreenMetrics(c *gin.Context) {
+	eventID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	ctx := c.Request.Context()
+	event, err := h.eventRepo.GetByID(ctx, eventID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+		return
+	}
+
+	var venue *models.Venue
+	if event.VenueID != nil {
+		venue, err = h.venueRepo.GetByID(ctx, *event.VenueID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Venue not found for event"})
+			return
+		}
+	}
+
+	ecoNames, err := h.eventRepo.GetEcoAttributeNamesByEventID(ctx, event.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch event eco attributes"})
+		return
+	}
+
+	metrics := service.CalculateGreenMetrics(event, venue, ecoNames)
+	if err := metrics.Validate(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Calculated metrics invalid: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, metrics)
 }

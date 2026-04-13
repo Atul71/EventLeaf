@@ -5,11 +5,17 @@ import (
 
 	"github.com/Atul71/EventLeaf/api/internal/db"
 	"github.com/Atul71/EventLeaf/api/internal/models"
+	"github.com/google/uuid"
 )
 
 type EventRepository struct {
 	db *db.DB
 }
+
+const eventFields = `id, title, description, organizer_id, venue_id, event_date, event_start_time::text, event_end_time::text,
+	is_eco_friendly, eco_summary, ticket_price, total_capacity, available_tickets,
+	status, visibility, image_url, event_url, category, has_digital_ticketing, has_paperless_checkin,
+	created_at, updated_at`
 
 func NewEventRepository(db *db.DB) *EventRepository {
 	return &EventRepository{db: db}
@@ -48,10 +54,7 @@ func (r *EventRepository) Create(ctx context.Context, req *models.CreateEventReq
 			is_eco_friendly, eco_summary, ticket_price, total_capacity, available_tickets,
 			status, visibility, category, has_digital_ticketing, has_paperless_checkin
 		) VALUES ($1, $2, $3, $4, $5::date, $6::time, $7::time, $8, $9, $10, $11, $12, $13, $14, NULLIF($15,''), true, true)
-		RETURNING id, title, description, organizer_id, venue_id, event_date, event_start_time::text, event_end_time::text,
-			is_eco_friendly, eco_summary, ticket_price, total_capacity, available_tickets,
-			status, visibility, image_url, event_url, category, has_digital_ticketing, has_paperless_checkin,
-			created_at, updated_at`,
+		RETURNING `+eventFields,
 		req.Title, req.Description, req.OrganizerID, venueID,
 		req.EventDate, req.EventStartTime, req.EventEndTime,
 		isEcoFriendly, ecoSummary, req.TicketPrice, req.TotalCapacity, req.TotalCapacity,
@@ -83,6 +86,47 @@ func (r *EventRepository) Create(ctx context.Context, req *models.CreateEventReq
 	}
 
 	return &event, nil
+}
+
+func (r *EventRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Event, error) {
+	var event models.Event
+	err := r.db.Pool.QueryRow(ctx, `SELECT `+eventFields+` FROM events WHERE id = $1`, id).Scan(
+		&event.ID, &event.Title, &event.Description, &event.OrganizerID, &event.VenueID,
+		&event.EventDate, &event.EventStartTime, &event.EventEndTime,
+		&event.IsEcoFriendly, &event.EcoSummary, &event.TicketPrice, &event.TotalCapacity, &event.AvailableTickets,
+		&event.Status, &event.Visibility, &event.ImageURL, &event.EventURL, &event.Category,
+		&event.HasDigitalTicketing, &event.HasPaperlessCheckin,
+		&event.CreatedAt, &event.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &event, nil
+}
+
+func (r *EventRepository) GetEcoAttributeNamesByEventID(ctx context.Context, eventID uuid.UUID) ([]string, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT ea.name
+		FROM event_eco_attributes eea
+		JOIN eco_attributes ea ON ea.id = eea.eco_attribute_id
+		WHERE eea.event_id = $1
+		ORDER BY ea.name
+	`, eventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var names []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		names = append(names, name)
+	}
+
+	return names, rows.Err()
 }
 
 func emptyToNull(s string) interface{} {
