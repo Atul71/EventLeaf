@@ -1,20 +1,16 @@
 import { Link } from "react-router-dom";
+import { AuthNavActions } from "../components/AuthNavActions";
 import { Logo } from "../components/Logo";
 
+// Lush forest canopy – environment-focused hero (Unsplash, free to use)
 const HERO_IMAGE =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuBHoh-Wviba6xbyzV_za3GMmzDdlPCJQkaKIW3f484YIzzrc7oI4g-i876dNvGjLp0xllaCGOBODNkb9QCmrQjZqv8EaRnv-1cogzXO1yGurJPtakM9vG0FQoYDIMZQBdUlAG-_YPnZnAx2n6_B-Wu5kTDyJtpRLf3eppLsqubMh3sLNTvuogO6hPTiRQ3qEET95JPdX8XYLeiIWIOH80-wwt99UJz5DgHTxaBCIVhYIKb-8m9K1z8iYraPCW1h5rfjlLVqMWOWVQ";
-const AVATAR1 =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuDU-1_u-PWYjXVAbkB0ltsQ87HGlj2mblrFhuHS5OtIhIuu9rPlQz-sPqIoX5tKu5U-ZAYgsIblWmiT8uc4GA-RU-XCJj9C1iCil2bfzyXFn-_TRyeHWsyVAKXgtL3LLnu_wndoU4hyuvl8RxMe-QWan17z3UjXtC-DSGfkaHss1zQTNGljiJT3LcikIoAM-Bq7I2hRwPsqm-sbgLD03Wb9rd_dFaqkHA-DsmeJBumregv5ll_ODWwdIjBoMocHDaxUqy4Velu1YA";
-const AVATAR2 =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuDbksocYhNKpIuEXji7rNHY75GL163xlLQM-ls8cWPZkX4lhMNeciuekuVu1_PqGHXVHRcffuXhtmN6hgUkY9Ic0FrVODLErPJQhIDLDuF5tgKM9BXRjK3-68Zru2tevaw5Fq_O5EFVUUYlCVjmKr1U-vqBRiI69U7ZO5cXiZhRANXuvs6vzDixj2vo71X3RUvzAKiBXTKYnHk2MNVnSrcPu1KHmLthS9YA7t-BKuToYwfHqWWg9_2daWZYRvhyGTawemw1McEWuw";
-const AVATAR3 =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuAMUUdaU-3JpLsWV9JhvkEyZ23zlfvdw0gLiOJTgC9RIig_OfyTb6hjmf8J1m9W1_IJWtjjT_cZFRY8RUxOc2zoz8T_VB3HCIC4SwLCciI3-C6AfVbApplb1nOvVnYpXvsbPOxfEBgtNjqHKCSLbw-Ug33AaYiODeDjBC7KK1FWAymo4w6jwr7Chvl0v3Hr13XLEhJr1G8F1u4TRhR50PTM0JVGkZBjiOAFrUIl3bXpuEO2ptyUTBXeOLlkZumReY7o3gRvF7U-rA";
+  "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1200&q=80";
 
 const STATS = [
-  { label: "Paper Saved", value: "1.2M", change: "+12%" },
-  { label: "Carbon Offset", value: "450T", change: "+8%" },
-  { label: "Eco-Events", value: "15K+", change: "+25%" },
-  { label: "Community Growth", value: "92%", change: "↑" },
+  { label: "Metric 1", value: "—", change: "" },
+  { label: "Metric 2", value: "—", change: "" },
+  { label: "Metric 3", value: "—", change: "" },
+  { label: "Metric 4", value: "—", change: "" },
 ] as const;
 
 const FEATURES = [
@@ -55,32 +51,13 @@ export function LandingPage() {
               About
             </a>
           </nav>
-          <div className="flex items-center gap-3">
-            <Link
-              to="/login"
-              className="px-4 py-2 text-sm font-bold hover:text-primary transition-colors dark:text-gray-300"
-            >
-              Login
-            </Link>
-            <Link
-              to="/signup"
-              className="bg-primary text-background-dark px-5 py-2 rounded-lg text-sm font-bold hover:opacity-90 transition-all shadow-sm"
-            >
-              Sign Up
-            </Link>
-          </div>
+          <AuthNavActions />
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-6">
         <section className="py-16 md:py-24 grid lg:grid-cols-2 gap-12 items-center">
           <div className="flex flex-col gap-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-soft-green dark:bg-primary/10 border border-border-green dark:border-primary/20 w-fit">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-xs font-bold uppercase tracking-wider text-neutral-leaf dark:text-primary">
-                New: Carbon Tracking 2.0
-              </span>
-            </div>
             <h1 className="text-5xl md:text-7xl font-black leading-[1.1] tracking-tight dark:text-white">
               Organize Events, <span className="text-primary">Save the Planet</span>
             </h1>
@@ -95,35 +72,12 @@ export function LandingPage() {
               >
                 Get Started Free
               </Link>
-              <a
-                href="#demo"
-                className="bg-soft-green dark:bg-white/5 border border-border-green dark:border-white/10 px-8 py-4 rounded-xl text-base font-bold flex items-center gap-2 hover:bg-white transition-colors dark:text-white"
-              >
-                <span className="material-symbols-outlined">play_circle</span>
-                Watch Demo
-              </a>
-            </div>
-            <div className="flex items-center gap-4 pt-4">
-              <div className="flex -space-x-3">
-                <div className="w-10 h-10 rounded-full border-2 border-white bg-gray-200 overflow-hidden">
-                  <img className="w-full h-full object-cover" alt="Event organizer" src={AVATAR1} />
-                </div>
-                <div className="w-10 h-10 rounded-full border-2 border-white bg-gray-200 overflow-hidden">
-                  <img className="w-full h-full object-cover" alt="Event manager" src={AVATAR2} />
-                </div>
-                <div className="w-10 h-10 rounded-full border-2 border-white bg-gray-200 overflow-hidden">
-                  <img className="w-full h-full object-cover" alt="Professional" src={AVATAR3} />
-                </div>
-              </div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                Trusted by <span className="font-bold text-background-dark dark:text-white">2,000+</span> eco-planners
-              </p>
             </div>
           </div>
           <div className="relative">
             <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full" />
             <div className="relative rounded-2xl overflow-hidden border-8 border-white dark:border-white/5 shadow-2xl aspect-[4/3]">
-              <img className="w-full h-full object-cover" alt="Sustainable outdoor conference" src={HERO_IMAGE} />
+              <img className="w-full h-full object-cover" alt="Lush green forest canopy – nature and environment" src={HERO_IMAGE} />
             </div>
           </div>
         </section>

@@ -1,32 +1,61 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
+	"github.com/Atul71/EventLeaf/api/internal/middleware"
 	"github.com/Atul71/EventLeaf/api/internal/models"
-	"github.com/Atul71/EventLeaf/api/internal/repository"
 	"github.com/Atul71/EventLeaf/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type EventHandler struct {
-	eventRepo   *repository.EventRepository
-	venueRepo   *repository.VenueRepository
-	ecoAttrRepo *repository.EcoAttributeRepository
+	eventRepo        EventRepository
+	venueRepo        VenueRepository
+	ecoAttrRepo      EcoAttributeRepository
+	googleCalendar   CalendarPublisher
+	calendarTimeZone string
 }
 
 func NewEventHandler(
-	eventRepo *repository.EventRepository,
-	venueRepo *repository.VenueRepository,
-	ecoAttrRepo *repository.EcoAttributeRepository,
+	eventRepo EventRepository,
+	venueRepo VenueRepository,
+	ecoAttrRepo EcoAttributeRepository,
+	googleCalendar CalendarPublisher,
+	calendarTimeZone string,
 ) *EventHandler {
 	return &EventHandler{
-		eventRepo:   eventRepo,
-		venueRepo:   venueRepo,
-		ecoAttrRepo: ecoAttrRepo,
+		eventRepo:        eventRepo,
+		venueRepo:        venueRepo,
+		ecoAttrRepo:      ecoAttrRepo,
+		googleCalendar:   googleCalendar,
+		calendarTimeZone: calendarTimeZone,
 	}
+}
+
+func isEventPubliclyListed(e *models.Event) bool {
+	return e.Status == "published" && e.Visibility == "public"
+}
+
+func authUserID(c *gin.Context) (uuid.UUID, bool) {
+	v, ok := c.Get(middleware.ContextUserIDKey)
+	if !ok || v == nil {
+		return uuid.Nil, false
+	}
+	s, ok := v.(string)
+	if !ok || s == "" {
+		return uuid.Nil, false
+	}
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return uuid.Nil, false
+	}
+	return id, true
 }
 
 // CreateEvent godoc
@@ -48,19 +77,29 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 		return
 	}
 
+	sessUID, ok := authUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing auth"})
+		return
+	}
+	if req.OrganizerID != sessUID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "organizer_id must match signed-in user"})
+		return
+	}
+
 	ctx := c.Request.Context()
-	var err error
 
 	venueIsEcoCertified := true
 	venueIDProvided := req.VenueID != nil
-	var venue *models.Venue
+	var selectedVenue *models.Venue
 
 	if venueIDProvided {
-		venue, err = h.venueRepo.GetByID(ctx, *req.VenueID)
+		venue, err := h.venueRepo.GetByID(ctx, *req.VenueID)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Venue not found"})
 			return
 		}
+		selectedVenue = venue
 		venueIsEcoCertified = venue.IsEcoCertified
 	}
 
@@ -76,39 +115,234 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 
 	greenResult := service.VerifyGreenCriteria(venueIsEcoCertified, venueIDProvided, ecoNames)
 	preCreateEvent := &models.Event{
+		OrganizerID:         req.OrganizerID,
 		TotalCapacity:       req.TotalCapacity,
-		HasDigitalTicketing: true,
-		HasPaperlessCheckin: true,
+		HasDigitalTicketing: containsEcoName(ecoNames, "Paperless Ticketing"),
+		HasPaperlessCheckin: containsEcoName(ecoNames, "Digital Check-in"),
 	}
 	if req.EcoSummary != "" {
 		preCreateEvent.EcoSummary = &req.EcoSummary
 	}
-	metrics := service.CalculateGreenMetrics(preCreateEvent, venue, ecoNames)
+	metrics := service.CalculateGreenMetrics(preCreateEvent, selectedVenue, ecoNames)
 
-	isGreen := metrics.IsEcoFriendly
-
-	event, err := h.eventRepo.Create(ctx, &req, isGreen)
+	event, err := h.eventRepo.Create(ctx, &req, metrics.IsEcoFriendly)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create event: " + err.Error()})
 		return
 	}
 	metrics.EventID = event.ID
 
-	notGreenReasons := append([]string{}, greenResult.CriteriaNotMet...)
-	if !metrics.IsEcoFriendly {
-		notGreenReasons = append(notGreenReasons,
-			fmt.Sprintf("Overall score %.2f is below eco-friendly threshold %.0f", metrics.OverallSustainabilityScore, models.EcoFriendlyThreshold))
-	}
-
-	c.JSON(http.StatusCreated, models.CreateEventResponse{
+	resp := models.CreateEventResponse{
 		Event:               *event,
-		IsGreen:             isGreen,
+		IsGreen:             metrics.IsEcoFriendly,
 		SustainabilityScore: metrics.OverallSustainabilityScore,
 		Metrics:             metrics,
 		GreenCriteria: append(greenResult.CriteriaMet,
 			fmt.Sprintf("Overall sustainability score: %.2f/100", metrics.OverallSustainabilityScore)),
-		NotGreenReasons: notGreenReasons,
-	})
+		NotGreenReasons: append(greenResult.CriteriaNotMet, func() []string {
+			if metrics.IsEcoFriendly {
+				return nil
+			}
+			return []string{fmt.Sprintf("Overall score %.2f is below eco-friendly threshold %.0f", metrics.OverallSustainabilityScore, models.EcoFriendlyThreshold)}
+		}()...),
+		CalendarICSPath: "/api/v1/events/" + event.ID.String() + "/calendar.ics",
+	}
+
+	// Only published events are synced to Google Calendar.
+	if event.Status == "published" && h.googleCalendar != nil {
+		if err := h.googleCalendar.SyncPublishedEvent(ctx, event, selectedVenue); err != nil {
+			resp.CalendarSyncError = err.Error()
+		}
+	}
+
+	c.JSON(http.StatusCreated, resp)
+}
+
+// GetEventCalendarICS godoc
+// @Summary      Download event as iCalendar (.ics)
+// @Description  Returns an RFC 5545 ICS file for adding the event to Apple, Google, Outlook, etc.
+// @Tags         events
+// @Produce      text/calendar
+// @Param        id   path      string  true  "Event ID"
+// @Success      200  {string}  string  "ICS file"
+// @Failure      400  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /events/{id}/calendar.ics [get]
+func (h *EventHandler) GetEventCalendarICS(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	ctx := c.Request.Context()
+	event, err := h.eventRepo.GetByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load event: " + err.Error()})
+		return
+	}
+	if !isEventPubliclyListed(event) {
+		uid, ok := authUserID(c)
+		if !ok || event.OrganizerID != uid {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+			return
+		}
+	}
+
+	var venue *models.Venue
+	if event.VenueID != nil {
+		v, err := h.venueRepo.GetByID(ctx, *event.VenueID)
+		if err == nil {
+			venue = v
+		}
+	}
+
+	body, err := service.BuildEventICS(event, venue, h.calendarTimeZone)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to build calendar file: " + err.Error()})
+		return
+	}
+
+	filename := "event-" + id.String() + ".ics"
+	c.Header("Content-Type", "text/calendar; charset=utf-8")
+	c.Header("Content-Disposition", `attachment; filename="`+filename+`"`)
+	c.Data(http.StatusOK, "text/calendar; charset=utf-8", body)
+}
+
+// ListEvents godoc
+// @Summary      List published public events
+// @Tags         events
+// @Produce      json
+// @Param        limit   query  int  false  "Limit (default 50, max 100)"
+// @Param        offset  query  int  false  "Offset (default 0)"
+// @Success      200  {array}   models.Event
+// @Failure      500  {object}  map[string]string
+// @Router       /events [get]
+func (h *EventHandler) ListEvents(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if limit < 1 || limit > 100 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	events, err := h.eventRepo.ListPublished(c.Request.Context(), limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch events: " + err.Error()})
+		return
+	}
+	if events == nil {
+		events = []models.Event{}
+	}
+	c.JSON(http.StatusOK, events)
+}
+
+// GetEvent godoc
+// @Summary      Get event by id
+// @Tags         events
+// @Produce      json
+// @Param        id   path  string  true  "Event UUID"
+// @Success      200  {object}  models.Event
+// @Failure      400  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Router       /events/{id} [get]
+func (h *EventHandler) GetEvent(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event id"})
+		return
+	}
+	event, err := h.eventRepo.GetByID(c.Request.Context(), id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch event"})
+		return
+	}
+	if !isEventPubliclyListed(event) {
+		uid, ok := authUserID(c)
+		if !ok || event.OrganizerID != uid {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+			return
+		}
+	}
+	c.JSON(http.StatusOK, event)
+}
+
+// ListMyEvents returns all events for the signed-in organizer (drafts and published).
+func (h *EventHandler) ListMyEvents(c *gin.Context) {
+	uid, ok := authUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing auth"})
+		return
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if limit < 1 || limit > 500 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	events, err := h.eventRepo.ListByOrganizer(c.Request.Context(), uid, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch events: " + err.Error()})
+		return
+	}
+	if events == nil {
+		events = []models.Event{}
+	}
+	c.JSON(http.StatusOK, events)
+}
+
+// PublishEvent sets a draft (or existing) event to published so it appears in Discover.
+func (h *EventHandler) PublishEvent(c *gin.Context) {
+	uid, ok := authUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing auth"})
+		return
+	}
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+	ctx := c.Request.Context()
+	event, err := h.eventRepo.PublishForOrganizer(ctx, id, uid)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to publish event: " + err.Error()})
+		return
+	}
+
+	var selectedVenue *models.Venue
+	if event.VenueID != nil {
+		v, err := h.venueRepo.GetByID(ctx, *event.VenueID)
+		if err == nil {
+			selectedVenue = v
+		}
+	}
+	resp := models.CreateEventResponse{
+		Event:           *event,
+		CalendarICSPath: "/api/v1/events/" + event.ID.String() + "/calendar.ics",
+	}
+	if h.googleCalendar != nil {
+		if err := h.googleCalendar.SyncPublishedEvent(ctx, event, selectedVenue); err != nil {
+			resp.CalendarSyncError = err.Error()
+		}
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 // ListEcoAttributes godoc
@@ -128,51 +362,54 @@ func (h *EventHandler) ListEcoAttributes(c *gin.Context) {
 	c.JSON(http.StatusOK, attrs)
 }
 
-// GetEventGreenMetrics godoc
-// @Summary      Get sustainability metrics for an event
-// @Description  Calculates weighted sustainability metrics and eco-friendly status for an existing event
-// @Tags         events
-// @Produce      json
-// @Param        id   path      string  true  "Event ID"
-// @Success      200   {object}  models.GreenMetrics
-// @Failure      400   {object}  map[string]string  "Invalid event ID"
-// @Failure      404   {object}  map[string]string  "Event not found"
-// @Failure      500   {object}  map[string]string  "Server error"
-// @Router       /events/{id}/metrics [get]
 func (h *EventHandler) GetEventGreenMetrics(c *gin.Context) {
-	eventID, err := uuid.Parse(c.Param("id"))
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
 		return
 	}
-
 	ctx := c.Request.Context()
-	event, err := h.eventRepo.GetByID(ctx, eventID)
+	event, err := h.eventRepo.GetByID(ctx, id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load event"})
 		return
 	}
-
-	var venue *models.Venue
-	if event.VenueID != nil {
-		venue, err = h.venueRepo.GetByID(ctx, *event.VenueID)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Venue not found for event"})
+	if !isEventPubliclyListed(event) {
+		uid, ok := authUserID(c)
+		if !ok || event.OrganizerID != uid {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
 			return
 		}
 	}
 
+	var venue *models.Venue
+	if event.VenueID != nil {
+		if v, err := h.venueRepo.GetByID(ctx, *event.VenueID); err == nil {
+			venue = v
+		}
+	}
 	ecoNames, err := h.eventRepo.GetEcoAttributeNamesByEventID(ctx, event.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch event eco attributes"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch eco attributes"})
 		return
 	}
-
 	metrics := service.CalculateGreenMetrics(event, venue, ecoNames)
 	if err := metrics.Validate(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Calculated metrics invalid: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Metrics validation failed: " + err.Error()})
 		return
 	}
-
 	c.JSON(http.StatusOK, metrics)
+}
+
+func containsEcoName(names []string, target string) bool {
+	for _, name := range names {
+		if name == target {
+			return true
+		}
+	}
+	return false
 }

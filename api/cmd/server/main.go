@@ -20,7 +20,9 @@ import (
 	"github.com/Atul71/EventLeaf/api/internal/config"
 	"github.com/Atul71/EventLeaf/api/internal/db"
 	"github.com/Atul71/EventLeaf/api/internal/handler"
+	"github.com/Atul71/EventLeaf/api/internal/middleware"
 	"github.com/Atul71/EventLeaf/api/internal/repository"
+	"github.com/Atul71/EventLeaf/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	swaggerFiles "github.com/swaggo/files"
@@ -44,8 +46,26 @@ func main() {
 	eventRepo := repository.NewEventRepository(database)
 	venueRepo := repository.NewVenueRepository(database)
 	ecoAttrRepo := repository.NewEcoAttributeRepository(database)
-	eventHandler := handler.NewEventHandler(eventRepo, venueRepo, ecoAttrRepo)
+	userRepo := repository.NewUserRepository(database)
+	googleCalendarRepo := repository.NewGoogleCalendarRepository(database)
+	googleCalendarSvc, err := service.NewGoogleCalendarService(
+		ctx,
+		googleCalendarRepo,
+		cfg.GoogleClientID,
+		cfg.GoogleClientSecret,
+		cfg.GoogleRefreshToken,
+		cfg.GoogleCalendarID,
+		cfg.GoogleCalendarTimeZone,
+	)
+	if err != nil {
+		log.Fatalf("Failed to initialize Google Calendar service: %v", err)
+	}
+	eventHandler := handler.NewEventHandler(eventRepo, venueRepo, ecoAttrRepo, googleCalendarSvc, cfg.GoogleCalendarTimeZone)
+	favoriteRepo := repository.NewFavoriteRepository(database)
+	favoriteHandler := handler.NewFavoriteHandler(favoriteRepo, eventRepo)
 	venueHandler := handler.NewVenueHandler(venueRepo)
+	bootstrapHandler := handler.NewBootstrapHandler(userRepo)
+	authHandler := handler.NewAuthHandler(userRepo, cfg.JWTSecret, cfg.AuthCookieName, cfg.AuthCookieSecure)
 
 	router := gin.Default()
 	router.GET("/health", func(c *gin.Context) {
@@ -57,9 +77,13 @@ func main() {
 
 	v1 := router.Group("/api/v1")
 	{
-		v1.POST("/events", eventHandler.CreateEvent)
-		v1.GET("/events/:id/metrics", eventHandler.GetEventGreenMetrics)
+		v1.POST("/login", authHandler.Login)
+		v1.POST("/signup", authHandler.Signup)
+		v1.POST("/logout", authHandler.Logout)
+
+		v1.GET("/events", eventHandler.ListEvents)
 		v1.GET("/eco-attributes", eventHandler.ListEcoAttributes)
+		v1.GET("/bootstrap/organizer-id", bootstrapHandler.DemoOrganizerID)
 
 		// Venue CRUD endpoints
 		v1.POST("/venues", venueHandler.CreateVenue)
@@ -67,6 +91,30 @@ func main() {
 		v1.GET("/venues/:id", venueHandler.GetVenue)
 		v1.PUT("/venues/:id", venueHandler.UpdateVenue)
 		v1.DELETE("/venues/:id", venueHandler.DeleteVenue)
+	}
+
+	// Draft / non-public events require the organizer session (cookie) to view.
+	withOptionalAuth := v1.Group("")
+	withOptionalAuth.Use(middleware.OptionalAuth(cfg.JWTSecret, cfg.AuthCookieName))
+	{
+		withOptionalAuth.GET("/events/:id", eventHandler.GetEvent)
+		withOptionalAuth.GET("/events/:id/metrics", eventHandler.GetEventGreenMetrics)
+		withOptionalAuth.GET("/events/:id/calendar.ics", eventHandler.GetEventCalendarICS)
+	}
+
+	protected := v1.Group("")
+	protected.Use(middleware.RequireAuth(cfg.JWTSecret, cfg.AuthCookieName))
+	{
+		protected.GET("/me", authHandler.Me)
+		protected.GET("/me/saved-events", favoriteHandler.ListSavedEvents)
+		protected.GET("/me/saved-event-ids", favoriteHandler.ListSavedEventIDs)
+		protected.POST("/me/saved-events/:eventId", favoriteHandler.AddSavedEvent)
+		protected.DELETE("/me/saved-events/:eventId", favoriteHandler.RemoveSavedEvent)
+		// List all events for the signed-in organizer (draft + live). Alias for proxies/clients that prefer this path.
+		protected.GET("/organizer/events", eventHandler.ListMyEvents)
+		protected.GET("/me/events", eventHandler.ListMyEvents)
+		protected.POST("/events", eventHandler.CreateEvent)
+		protected.POST("/events/:id/publish", eventHandler.PublishEvent)
 	}
 
 	srv := &http.Server{

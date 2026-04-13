@@ -5,16 +5,15 @@ import (
 	"strconv"
 
 	"github.com/Atul71/EventLeaf/api/internal/models"
-	"github.com/Atul71/EventLeaf/api/internal/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type VenueHandler struct {
-	venueRepo *repository.VenueRepository
+	venueRepo VenueRepository
 }
 
-func NewVenueHandler(venueRepo *repository.VenueRepository) *VenueHandler {
+func NewVenueHandler(venueRepo VenueRepository) *VenueHandler {
 	return &VenueHandler{venueRepo: venueRepo}
 }
 
@@ -79,7 +78,7 @@ func (h *VenueHandler) GetVenue(c *gin.Context) {
 func (h *VenueHandler) ListVenues(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	if limit < 1 || limit > 100 {
+	if limit < 1 || limit > 500 {
 		limit = 20
 	}
 	if offset < 0 {
@@ -149,5 +148,5 @@ func (h *VenueHandler) DeleteVenue(c *gin.Context) {
 		c.JSON(status, gin.H{"error": err.Error()})
 		return
 	}
-	c.Status(http.StatusNoContent)
+	c.AbortWithStatus(http.StatusNoContent)
 }
