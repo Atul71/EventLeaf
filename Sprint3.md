@@ -28,7 +28,7 @@ We have completed the following CR for this sprint.
 
 
 - Shane George Thomas  
-UI: Login Validation and Unit Tests - 3 story points 
+UI: Login Validation - 3 story points 
 <BR>UI, API: Edit Profile and Settings - 5 story points 
 
 # What issues your team planned to address?
