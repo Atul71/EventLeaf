@@ -73,6 +73,13 @@ function isEventInDateRange(e: ApiEvent, range: DateRangeOption): boolean {
   return eventDate.getFullYear() === now.getFullYear() && eventDate.getMonth() === now.getMonth();
 }
 
+function isPastEvent(e: ApiEvent): boolean {
+  const eventDayMs = parseEventDateToLocalDayMs(e.event_date);
+  if (eventDayMs == null) return false;
+  const today = startOfLocalDay(new Date());
+  return eventDayMs < today;
+}
+
 export function DiscoverEventsPage() {
   const navigate = useNavigate();
   const [events, setEvents] = useState<ApiEvent[]>([]);
@@ -189,6 +196,10 @@ export function DiscoverEventsPage() {
     });
 
     result = [...result].sort((a, b) => {
+      // Keep active/future events first, then place expired/completed events after.
+      const aPast = isPastEvent(a);
+      const bPast = isPastEvent(b);
+      if (aPast !== bPast) return aPast ? 1 : -1;
       if (sortBy === "capacity") return (b.total_capacity ?? 0) - (a.total_capacity ?? 0);
       if (sortBy === "price") return a.ticket_price - b.ticket_price;
       return sustainabilityScoreFromApi(b) - sustainabilityScoreFromApi(a);
@@ -477,6 +488,7 @@ export function DiscoverEventsPage() {
 
         <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filtered.map((event) => {
+            const expired = isPastEvent(event);
             const hero = event.image_url || FALLBACK_EVENT_IMAGE;
             const venueImg = venueImageUrlForEvent(event);
             const venueName = event.venue_name?.trim() || "Venue TBA";
@@ -495,6 +507,11 @@ export function DiscoverEventsPage() {
               >
                 <div className="relative h-52 shrink-0">
                   <img src={hero} alt={event.title} className="h-full w-full object-cover" />
+                  {expired ? (
+                    <span className="absolute top-3 right-16 rounded-full border border-amber-200 bg-amber-50/95 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-amber-900">
+                      Event expired/completed
+                    </span>
+                  ) : null}
                   <button
                     type="button"
                     disabled={saveToggleBusy === event.id}

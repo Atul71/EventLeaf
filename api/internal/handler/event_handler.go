@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Atul71/EventLeaf/api/internal/middleware"
 	"github.com/Atul71/EventLeaf/api/internal/models"
@@ -343,6 +344,81 @@ func (h *EventHandler) PublishEvent(c *gin.Context) {
 		}
 	}
 	c.JSON(http.StatusOK, resp)
+}
+
+// BuyTicket creates one ticket for the signed-in user (no payment flow yet).
+func (h *EventHandler) BuyTicket(c *gin.Context) {
+	uid, ok := authUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing auth"})
+		return
+	}
+
+	eventID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	var req models.BuyTicketRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: " + err.Error()})
+		return
+	}
+	req.TicketType = strings.TrimSpace(req.TicketType)
+	if req.Quantity <= 0 {
+		req.Quantity = 1
+	}
+	if req.Quantity > 100 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Quantity cannot exceed 100 per purchase"})
+		return
+	}
+	if len(req.TicketType) > 50 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ticket_type must be 50 characters or fewer"})
+		return
+	}
+
+	tickets, remaining, err := h.eventRepo.BuyTicket(c.Request.Context(), eventID, uid, req.TicketType, req.Quantity)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Event is not purchasable (sold out, unpublished, past date, or quantity exceeds available seats)"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to buy ticket: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, models.BuyTicketResponse{
+		Tickets:          tickets,
+		RemainingTickets: remaining,
+	})
+}
+
+// ListMyTickets returns tickets purchased by the signed-in user.
+func (h *EventHandler) ListMyTickets(c *gin.Context) {
+	uid, ok := authUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing auth"})
+		return
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if limit < 1 || limit > 500 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	tickets, err := h.eventRepo.ListTicketsByUser(c.Request.Context(), uid, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch tickets: " + err.Error()})
+		return
+	}
+	if tickets == nil {
+		tickets = []models.Ticket{}
+	}
+	c.JSON(http.StatusOK, tickets)
 }
 
 // ListEcoAttributes godoc

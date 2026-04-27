@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/Atul71/EventLeaf/api/internal/db"
 	"github.com/Atul71/EventLeaf/api/internal/models"
@@ -314,6 +315,101 @@ func (r *EventRepository) GetEcoAttributeNamesByEventID(ctx context.Context, eve
 		names = append(names, name)
 	}
 	return names, rows.Err()
+}
+
+func (r *EventRepository) BuyTicket(ctx context.Context, eventID, userID uuid.UUID, ticketType string, quantity int) ([]models.Ticket, int, error) {
+	if ticketType == "" {
+		ticketType = "general"
+	}
+	if quantity < 1 {
+		quantity = 1
+	}
+
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer tx.Rollback(ctx)
+
+	var pricePaid float64
+	var remaining int
+	err = tx.QueryRow(ctx, `
+		UPDATE events
+		SET available_tickets = available_tickets - $2,
+			updated_at = NOW()
+		WHERE id = $1
+		  AND status = 'published'
+		  AND event_date >= CURRENT_DATE
+		  AND available_tickets >= $2
+		RETURNING ticket_price, available_tickets
+	`, eventID, quantity).Scan(&pricePaid, &remaining)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, 0, pgx.ErrNoRows
+		}
+		return nil, 0, err
+	}
+
+	tickets := make([]models.Ticket, 0, quantity)
+	for i := 0; i < quantity; i++ {
+		ticketUUID := uuid.New()
+		ticketNumber := fmt.Sprintf("EL-%s", ticketUUID.String())
+		qrValue := fmt.Sprintf("eventleaf:ticket:%s", ticketUUID.String())
+
+		var t models.Ticket
+		err = tx.QueryRow(ctx, `
+			INSERT INTO tickets (
+				id, user_id, event_id, ticket_number, ticket_type, status, price_paid
+			) VALUES ($1, $2, $3, $4, $5, 'active', $6)
+			RETURNING id, user_id, event_id, ticket_number, ticket_type, status, price_paid, purchase_date, created_at, updated_at
+		`, ticketUUID, userID, eventID, ticketNumber, ticketType, pricePaid).Scan(
+			&t.ID, &t.UserID, &t.EventID, &t.TicketNumber, &t.TicketType, &t.Status, &t.PricePaid, &t.PurchaseDate, &t.CreatedAt, &t.UpdatedAt,
+		)
+		if err != nil {
+			return nil, 0, err
+		}
+		t.QRCodeValue = qrValue
+		tickets = append(tickets, t)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, 0, err
+	}
+	return tickets, remaining, nil
+}
+
+func (r *EventRepository) ListTicketsByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Ticket, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT
+			t.id, t.user_id, t.event_id, t.ticket_number, t.ticket_type, t.status, t.price_paid,
+			t.purchase_date, t.created_at, t.updated_at,
+			e.title, e.event_date::text, v.name
+		FROM tickets t
+		INNER JOIN events e ON e.id = t.event_id
+		LEFT JOIN venues v ON v.id = e.venue_id
+		WHERE t.user_id = $1
+		ORDER BY t.purchase_date DESC
+		LIMIT $2 OFFSET $3
+	`, userID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]models.Ticket, 0)
+	for rows.Next() {
+		var t models.Ticket
+		if err := rows.Scan(
+			&t.ID, &t.UserID, &t.EventID, &t.TicketNumber, &t.TicketType, &t.Status, &t.PricePaid,
+			&t.PurchaseDate, &t.CreatedAt, &t.UpdatedAt,
+			&t.EventTitle, &t.EventDate, &t.VenueName,
+		); err != nil {
+			return nil, err
+		}
+		t.QRCodeValue = fmt.Sprintf("eventleaf:ticket:%s", t.ID.String())
+		out = append(out, t)
+	}
+	return out, rows.Err()
 }
 
 func emptyToNull(s string) interface{} {

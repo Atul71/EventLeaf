@@ -109,6 +109,7 @@ func main() {
 		protected.PATCH("/me", authHandler.UpdateMe)
 		protected.GET("/me/saved-events", favoriteHandler.ListSavedEvents)
 		protected.GET("/me/saved-event-ids", favoriteHandler.ListSavedEventIDs)
+		protected.GET("/me/tickets", eventHandler.ListMyTickets)
 		protected.POST("/me/saved-events/:eventId", favoriteHandler.AddSavedEvent)
 		protected.DELETE("/me/saved-events/:eventId", favoriteHandler.RemoveSavedEvent)
 		// List all events for the signed-in organizer (draft + live). Alias for proxies/clients that prefer this path.
@@ -116,6 +117,7 @@ func main() {
 		protected.GET("/me/events", eventHandler.ListMyEvents)
 		protected.POST("/events", eventHandler.CreateEvent)
 		protected.POST("/events/:id/publish", eventHandler.PublishEvent)
+		protected.POST("/events/:id/tickets", eventHandler.BuyTicket)
 	}
 
 	srv := &http.Server{
