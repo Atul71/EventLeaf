@@ -66,6 +66,33 @@ export type ApiEvent = {
   has_public_transit?: boolean;
 };
 
+export type ApiTicket = {
+  id: string;
+  user_id: string;
+  event_id: string;
+  ticket_number: string;
+  ticket_type: string;
+  status: string;
+  price_paid: number;
+  purchase_date: string;
+  created_at: string;
+  updated_at: string;
+  qr_code_value: string;
+  event_title?: string | null;
+  event_date?: string | null;
+  venue_name?: string | null;
+};
+
+export type BuyTicketsPayload = {
+  ticket_type?: string;
+  quantity?: number;
+};
+
+export type BuyTicketsResponse = {
+  tickets: ApiTicket[];
+  remaining_tickets: number;
+};
+
 export type CreateEventPayload = {
   title: string;
   description: string;
@@ -183,6 +210,24 @@ export async function fetchSavedEvents(limit = 200): Promise<ApiEvent[]> {
   const res = await fetch(`${API_PREFIX}/me/saved-events?limit=${limit}&offset=0`, { credentials: "include" });
   if (!res.ok) throw new Error(await parseError(res));
   return res.json() as Promise<ApiEvent[]>;
+}
+
+/** Signed-in user's purchased tickets. */
+export async function fetchMyTickets(limit = 200): Promise<ApiTicket[]> {
+  const res = await fetch(`${API_PREFIX}/me/tickets?limit=${limit}&offset=0`, { credentials: "include" });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json() as Promise<ApiTicket[]>;
+}
+
+export async function buyTicketsByEventId(eventId: string, payload: BuyTicketsPayload): Promise<BuyTicketsResponse> {
+  const res = await fetch(`${API_PREFIX}/events/${encodeURIComponent(eventId)}/tickets`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json() as Promise<BuyTicketsResponse>;
 }
 
 /** `null` = not signed in; otherwise favorited event IDs (may be empty). */

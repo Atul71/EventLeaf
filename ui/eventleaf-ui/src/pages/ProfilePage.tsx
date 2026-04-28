@@ -9,25 +9,18 @@ import { GreenTimeline } from "../components/attendee/GreenTimeline";
 import { ImpactTrophyCase } from "../components/attendee/ImpactTrophyCase";
 import { TicketStubsGallery } from "../components/attendee/TicketStubsGallery";
 import { ShareImpactCardModal } from "../components/attendee/ShareImpactCardModal";
-import { fetchSavedEvents, unsaveEventById, type ApiEvent } from "../api/eventleafApi";
+import { fetchMyTickets, fetchSavedEvents, unsaveEventById, type ApiEvent, type ApiTicket } from "../api/eventleafApi";
 
 const PROFILE_IMAGE =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuDnOzVJfB7xx40z1WVf-qoPjw7WUXx4Qt82hn5m8o31QBxf9XSxKObGW976MJyh05WZVAxF4nFTES2SQy5ZW6RVELPPHYf9zceW8S4ondIFtViysJ_q6xeonlaDMCM3ov3KNtrvkAG6MTDlJHlQ59H8NDjsE0SbqlH1kSTm6KO6m8rR9GbPyowmBagTxQq_rTiZjTjoi8aK6GqGiHBfm4x6cIyTd2PaNn6_tUEuwsHw6_eyPhgv4GknPeBCM8LS4tzVgiehfVv68g";
 const AVATAR_HEADER =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuC1o3grplRRO5eHkBed9M0tQ5sur273hPulAZmZGqd6fcwGTcBwReNNPCv8mnFdHMJ9NiBwLFtKqIsICOAeo3MuL4vDvJ2ypKnaAiQ54FJr3B7gTDal34zbf1UxlCDPI6a6aXkiAPUNW0pNKCkxVxjao2OUFD5ube_IzPWc22lyukb3Ui_8K2pTD9NuFroPP0K4t9JNISrYR0fuPCzzebPEe5tnuVWOZbQp5ubQwN-J4_QkgKz_Se-SDit-ttJOa0e_ewIUpCm47RA";
-const EVENT_IMAGE_1 =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuAXaf7r5E82omvGNLSFSsKstOAPPdjuGdb3tpCzVwSGEEyNwmdJdg97wKlrlIOFArmIR6UkbzeeZIQ2ryHZcm5zKMNsbgYfKYzlXwAA2T7QZ_A53D8tvGh9Fg-9Ou3GvIhL8E5eK7UkyYiMqA5JK8BohK3qnzcXM3UWgSH8AXeWPvWMWt0mM5wcHAdo69mMtL15SBikFxS7aolm3dRytp6G8A-crgK3pHOl1z0Aj9HNzhDpE-KUmj8PFiJmY5eorX_l1N0kFQNNHg";
-const EVENT_IMAGE_2 =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuAI0lRqLsSz2FJaw5YB6CrMLPzpvdHolIt9N-arrgNnWrnaYgygcHQCT23A6w30wFTP45TQqbmc64j9MrCtwU3L3BVokhU_SHW-E0H3tMgVrRtcTkH8_P21dCgOpC9mcWMI21FFw0Jgho8vErlwjEcibhASugfMTB1jsTY6Mk5JDWLD98-lyedhnlo-PbUonQ_ySSFZ_pHxs2XC0k8u1L8r6MMRhEIqX5jG0tHGPPqN2-5pmhsJePyvDb5UD_IXkKAynmuNdJy_-g";
-const QR_CODE_IMAGE =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuDWtW5ZKqOExTNPyI1rhkfCxtgxo-b-6j2naSx60wvoA6KB5Kk61hx3ZGsb_bi0Ah6XjSA-C7mtc_Rsl7q26sbPjDQFb_LmAgDmNFVgDjSg8oMp73I-dWn5ZoloSUxRc8RysmkkQLWxkXUspbXTejWKzddwOx8aNOA_K0LdLcEg58PUac0CtGdc_YMIKiUZwHkIB7Fhms56dW6dI7bu7D8VMyqEvKkiaaZ2dhTkj97muGImoqNIqXA3Kssut41usUd9hbEaIyh7bw";
-
 type ProfileTab = "tickets" | "impact" | "stubs" | "saved" | "settings";
 
 export function ProfilePage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<ProfileTab>("impact");
-  const [qrModalEvent, setQrModalEvent] = useState<string | null>(null);
+  const [qrModalTicket, setQrModalTicket] = useState<ApiTicket | null>(null);
   const [impact, setImpact] = useState<AttendeeImpactPayload | null>(null);
   const [impactLoading, setImpactLoading] = useState(true);
   const [impactError, setImpactError] = useState<string | null>(null);
@@ -37,6 +30,9 @@ export function ProfilePage() {
   const [savedEvents, setSavedEvents] = useState<ApiEvent[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
   const [savedError, setSavedError] = useState<string | null>(null);
+  const [myTickets, setMyTickets] = useState<ApiTicket[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [ticketsError, setTicketsError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,6 +76,26 @@ export function ProfilePage() {
   }, []);
 
   useEffect(() => {
+    if (activeTab !== "tickets" || authLoading) return;
+    let cancelled = false;
+    setTicketsLoading(true);
+    setTicketsError(null);
+    fetchMyTickets()
+      .then((data) => {
+        if (!cancelled) setMyTickets(data);
+      })
+      .catch((e: Error) => {
+        if (!cancelled) setTicketsError(e.message || "Could not load tickets");
+      })
+      .finally(() => {
+        if (!cancelled) setTicketsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, authLoading]);
+
+  useEffect(() => {
     if (activeTab !== "saved" || authLoading) return;
     let cancelled = false;
     setSavedLoading(true);
@@ -106,7 +122,6 @@ export function ProfilePage() {
     discover: "/events",
     impact: "#/impact",
     filter: "#/profile/filter",
-    downloadWallet: "#/download-wallet",
   };
 
   const displayName = impact?.displayName ?? "Vivek Chengannassery";
@@ -360,86 +375,61 @@ export function ProfilePage() {
                     Filter
                   </Link>
                 </div>
-
-                <div className="group relative overflow-hidden rounded-xl bg-white dark:bg-[#1a2e1c] p-4 sm:p-5 shadow-sm border border-border-leaf flex flex-col sm:flex-row sm:items-center gap-4 transition-all hover:shadow-md hover:border-primary/40">
+                {ticketsLoading ? (
+                  <p className="py-8 text-center text-subtext-leaf">Loading your tickets…</p>
+                ) : ticketsError ? (
                   <div
-                    className="h-40 sm:h-20 sm:w-20 w-full rounded-lg bg-cover bg-center flex-shrink-0"
-                    style={{ backgroundImage: `url('${EVENT_IMAGE_1}')` }}
-                    role="img"
-                    aria-label="Event"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-start">
-                      <div>
-                        <h4 className="font-bold text-lg group-hover:text-primary transition-colors">
-                          Global Green Summit 2024
-                        </h4>
-                        <p className="text-sm text-subtext-leaf flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">calendar_month</span>
-                          Oct 12, 2024 • 09:00 AM
-                        </p>
-                        <p className="text-sm text-subtext-leaf flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">location_on</span>
-                          Oregon Convention Center
-                        </p>
-                      </div>
-                      <span className="bg-neutral-bg dark:bg-white/5 text-[10px] font-bold px-2 py-1 rounded text-subtext-leaf uppercase w-fit">
-                        Standard Pass
-                      </span>
-                    </div>
+                    role="alert"
+                    className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-950 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
+                  >
+                    {ticketsError}
                   </div>
-                  <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center gap-2 sm:pl-4 sm:border-l border-border-leaf border-t sm:border-t-0 pt-4 sm:pt-0">
-                    <button
-                      type="button"
-                      onClick={() => setQrModalEvent("Global Green Summit 2024")}
-                      className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all"
-                      aria-label="View QR for Global Green Summit 2024"
+                ) : myTickets.length === 0 ? (
+                  <p className="py-8 text-center text-subtext-leaf">No tickets yet. Buy a ticket from an event page first.</p>
+                ) : (
+                  myTickets.map((ticket) => (
+                    <div
+                      key={ticket.id}
+                      className="group relative overflow-hidden rounded-xl bg-white dark:bg-[#1a2e1c] p-4 sm:p-5 shadow-sm border border-border-leaf flex flex-col sm:flex-row sm:items-center gap-4 transition-all hover:shadow-md hover:border-primary/40"
                     >
-                      <span className="material-symbols-outlined text-3xl font-light">qr_code_2</span>
-                    </button>
-                    <span className="text-[10px] font-bold text-subtext-leaf uppercase">View QR</span>
-                  </div>
-                </div>
-
-                <div className="group relative overflow-hidden rounded-xl bg-white dark:bg-[#1a2e1c] p-4 sm:p-5 shadow-sm border border-border-leaf flex flex-col sm:flex-row sm:items-center gap-4 transition-all hover:shadow-md hover:border-primary/40">
-                  <div
-                    className="h-40 sm:h-20 sm:w-20 w-full rounded-lg bg-cover bg-center flex-shrink-0"
-                    style={{ backgroundImage: `url('${EVENT_IMAGE_2}')` }}
-                    role="img"
-                    aria-label="Event"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-start">
-                      <div>
-                        <h4 className="font-bold text-lg group-hover:text-primary transition-colors">
-                          Urban Permaculture Workshop
-                        </h4>
-                        <p className="text-sm text-subtext-leaf flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">calendar_month</span>
-                          Nov 05, 2024 • 02:00 PM
-                        </p>
-                        <p className="text-sm text-subtext-leaf flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">location_on</span>
-                          Community Garden Annex
-                        </p>
+                      <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-neutral-bg dark:bg-white/5 text-subtext-leaf">
+                        <span className="material-symbols-outlined text-3xl">confirmation_number</span>
                       </div>
-                      <span className="bg-neutral-bg dark:bg-white/5 text-[10px] font-bold px-2 py-1 rounded text-subtext-leaf uppercase w-fit">
-                        VIP Guest
-                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-start">
+                          <div>
+                            <h4 className="font-bold text-lg group-hover:text-primary transition-colors">
+                              {ticket.event_title || "Event"}
+                            </h4>
+                            <p className="text-sm text-subtext-leaf flex items-center gap-1">
+                              <span className="material-symbols-outlined text-xs">calendar_month</span>
+                              {ticket.event_date || "Date TBD"}
+                            </p>
+                            <p className="text-sm text-subtext-leaf flex items-center gap-1">
+                              <span className="material-symbols-outlined text-xs">location_on</span>
+                              {ticket.venue_name || "Venue TBD"}
+                            </p>
+                            <p className="text-xs text-subtext-leaf mt-1 font-mono">{ticket.ticket_number}</p>
+                          </div>
+                          <span className="bg-neutral-bg dark:bg-white/5 text-[10px] font-bold px-2 py-1 rounded text-subtext-leaf uppercase w-fit">
+                            {ticket.ticket_type}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center gap-2 sm:pl-4 sm:border-l border-border-leaf border-t sm:border-t-0 pt-4 sm:pt-0">
+                        <button
+                          type="button"
+                          onClick={() => setQrModalTicket(ticket)}
+                          className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all"
+                          aria-label={`View QR for ${ticket.event_title || "event"}`}
+                        >
+                          <span className="material-symbols-outlined text-3xl font-light">qr_code_2</span>
+                        </button>
+                        <span className="text-[10px] font-bold text-subtext-leaf uppercase">View QR</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center gap-2 sm:pl-4 sm:border-l border-border-leaf border-t sm:border-t-0 pt-4 sm:pt-0">
-                    <button
-                      type="button"
-                      onClick={() => setQrModalEvent("Urban Permaculture Workshop")}
-                      className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all"
-                      aria-label="View QR for Urban Permaculture Workshop"
-                    >
-                      <span className="material-symbols-outlined text-3xl font-light">qr_code_2</span>
-                    </button>
-                    <span className="text-[10px] font-bold text-subtext-leaf uppercase">View QR</span>
-                  </div>
-                </div>
+                  ))
+                )}
 
                 <button
                   type="button"
@@ -569,7 +559,7 @@ export function ProfilePage() {
         </div>
       </main>
 
-      {qrModalEvent && (
+      {qrModalTicket && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           role="dialog"
@@ -580,7 +570,7 @@ export function ProfilePage() {
             <button
               type="button"
               className="absolute top-4 right-4 text-subtext-leaf hover:text-text-leaf"
-              onClick={() => setQrModalEvent(null)}
+              onClick={() => setQrModalTicket(null)}
               aria-label="Close"
             >
               <span className="material-symbols-outlined">close</span>
@@ -588,9 +578,15 @@ export function ProfilePage() {
             <h3 id="qr-modal-title" className="text-xl font-bold mb-1">
               Your digital ticket
             </h3>
-            <p className="text-sm text-subtext-leaf mb-6">{qrModalEvent}</p>
+            <p className="text-sm text-subtext-leaf mb-6">{qrModalTicket.event_title || "Your event"}</p>
             <div className="bg-neutral-bg dark:bg-white/5 p-6 rounded-xl inline-block mb-6 border-2 border-border-leaf">
-              <img src={QR_CODE_IMAGE} alt="QR Code for Event Entry" className="mx-auto w-40 h-40 object-contain" />
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+                  qrModalTicket.qr_code_value
+                )}`}
+                alt="QR Code for Event Entry"
+                className="mx-auto w-40 h-40 object-contain bg-white p-2 rounded"
+              />
             </div>
             <div className="text-left space-y-2 mb-6">
               <div className="flex justify-between text-sm gap-2">
@@ -599,15 +595,13 @@ export function ProfilePage() {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="opacity-60">Ticket ID</span>
-                <span className="font-bold">#EF-88921-X</span>
+                <span className="font-bold">{qrModalTicket.ticket_number}</span>
+              </div>
+              <div className="flex justify-between text-sm gap-2">
+                <span className="opacity-60 shrink-0">QR value</span>
+                <span className="font-mono text-xs text-right break-all">{qrModalTicket.qr_code_value}</span>
               </div>
             </div>
-            <Link
-              to={mockLinks.downloadWallet}
-              className="w-full bg-primary py-3 rounded-xl font-bold text-text-leaf shadow-md block text-center"
-            >
-              Download to Wallet
-            </Link>
           </div>
         </div>
       )}

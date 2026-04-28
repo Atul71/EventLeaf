@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Logo } from "../components/Logo";
 import { EcoCertifiedBadge } from "../components/organizer/EcoCertifiedBadge";
-import { fetchEventById, publishEventById, type ApiEvent } from "../api/eventleafApi";
+import { buyTicketsByEventId, fetchEventById, publishEventById, type ApiEvent, type ApiTicket } from "../api/eventleafApi";
 import {
   certificationsFromApi,
   ecoProofsFromApi,
@@ -71,6 +71,13 @@ export function EventLandingPage() {
   const [loading, setLoading] = useState(true);
   const [publishBusy, setPublishBusy] = useState(false);
   const [publishErr, setPublishErr] = useState<string | null>(null);
+  const [ticketQty, setTicketQty] = useState(1);
+  const [ticketType, setTicketType] = useState("general");
+  const [showBuyModal, setShowBuyModal] = useState(false);
+  const [buyBusy, setBuyBusy] = useState(false);
+  const [buyErr, setBuyErr] = useState<string | null>(null);
+  const [buyMsg, setBuyMsg] = useState<string | null>(null);
+  const [lastPurchasedTickets, setLastPurchasedTickets] = useState<ApiTicket[]>([]);
 
   useEffect(() => {
     if (!resolvedEventId) {
@@ -226,6 +233,29 @@ export function EventLandingPage() {
     }
   }
 
+  async function handleBuyTickets() {
+    if (ev.available_tickets <= 0) return;
+    setBuyBusy(true);
+    setBuyErr(null);
+    setBuyMsg(null);
+    try {
+      const qty = Math.max(1, Math.min(ticketQty, ev.available_tickets));
+      const resp = await buyTicketsByEventId(ev.id, { ticket_type: ticketType, quantity: qty });
+      const purchasedTickets = Array.isArray((resp as unknown as { tickets?: unknown }).tickets) ? resp.tickets : [];
+      const purchasedCount = purchasedTickets.length > 0 ? purchasedTickets.length : 1;
+      const remaining = typeof resp.remaining_tickets === "number" ? resp.remaining_tickets : Math.max(0, ev.available_tickets - qty);
+      setEvent((prev) => (prev ? { ...prev, available_tickets: remaining } : prev));
+      setTicketQty((q) => Math.max(1, Math.min(q, Math.max(1, remaining))));
+      setLastPurchasedTickets(purchasedTickets);
+      setBuyMsg(`Purchased ${purchasedCount} ticket${purchasedCount === 1 ? "" : "s"}.`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Could not buy tickets";
+      setBuyErr(msg.includes("Missing auth") || msg.includes("auth") ? "Please sign in to buy tickets." : msg);
+    } finally {
+      setBuyBusy(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark text-text-leaf">
       <header className="sticky top-0 z-40 border-b border-border-green bg-white/80 dark:bg-background-dark/80 backdrop-blur-md">
@@ -324,9 +354,16 @@ export function EventLandingPage() {
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
+                disabled={buyBusy || ev.available_tickets <= 0}
+                onClick={() => {
+                  setBuyErr(null);
+                  setBuyMsg(null);
+                  setLastPurchasedTickets([]);
+                  setShowBuyModal(true);
+                }}
                 className="rounded-xl bg-primary px-6 py-3 font-black text-background-dark hover:brightness-95 transition-all"
               >
-                Get Tickets
+                {ev.available_tickets <= 0 ? "Sold Out" : buyBusy ? "Purchasing..." : "Get Tickets"}
               </button>
 
               {trailerUrl ? (
@@ -350,6 +387,8 @@ export function EventLandingPage() {
                 Share Event
               </button>
             </div>
+            {buyErr ? <p className="text-sm font-semibold text-red-700 dark:text-red-300">{buyErr}</p> : null}
+            {buyMsg ? <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{buyMsg}</p> : null}
           </div>
 
           <div className="relative overflow-hidden rounded-2xl border border-border-green shadow-lg min-h-[280px]">
@@ -490,6 +529,135 @@ export function EventLandingPage() {
           </article>
         </section>
       </main>
+      {showBuyModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-border-green bg-white p-6 shadow-2xl dark:bg-[#1a2e1c]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-black dark:text-white">Buy tickets</h3>
+                <p className="mt-1 text-sm text-subtext-leaf">{ev.title}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBuyModal(false)}
+                className="rounded-lg border border-border-green px-2 py-1 text-xs font-bold"
+              >
+                Close
+              </button>
+            </div>
+
+            {buyMsg ? (
+              <div className="mt-5 space-y-4">
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-900">
+                  {buyMsg}
+                </div>
+                {lastPurchasedTickets.length > 0 ? (
+                  <div className="rounded-lg border border-border-green bg-neutral-bg p-4">
+                    <p className="text-xs font-bold uppercase text-subtext-leaf">Ticket QR</p>
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+                        lastPurchasedTickets[0].qr_code_value
+                      )}`}
+                      alt="Purchased ticket QR code"
+                      className="mx-auto mt-3 h-44 w-44 rounded bg-white p-2"
+                    />
+                    <p className="mt-2 break-all text-center font-mono text-[11px] text-subtext-leaf">
+                      {lastPurchasedTickets[0].ticket_number}
+                    </p>
+                  </div>
+                ) : null}
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowBuyModal(false)}
+                    className="rounded-lg border border-border-green px-4 py-2 text-sm font-bold"
+                  >
+                    Close
+                  </button>
+                  <Link
+                    to="/profile"
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-black text-background-dark"
+                    onClick={() => setShowBuyModal(false)}
+                  >
+                    View all my tickets
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="mt-5 space-y-4">
+                  <div>
+                    <label htmlFor="buy-ticket-type" className="mb-1 block text-xs font-bold uppercase text-subtext-leaf">
+                      Ticket type
+                    </label>
+                    <select
+                      id="buy-ticket-type"
+                      value={ticketType}
+                      onChange={(e) => setTicketType(e.target.value)}
+                      className="w-full rounded-lg border border-border-green px-3 py-2 text-sm font-semibold"
+                    >
+                      <option value="general">General</option>
+                      <option value="vip">VIP</option>
+                      <option value="early_bird">Early bird</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="buy-ticket-qty" className="mb-1 block text-xs font-bold uppercase text-subtext-leaf">
+                      Quantity
+                    </label>
+                    <input
+                      id="buy-ticket-qty"
+                      type="number"
+                      min={1}
+                      max={Math.max(1, ev.available_tickets)}
+                      value={ticketQty}
+                      onChange={(e) => {
+                        const n = Number.parseInt(e.target.value || "1", 10);
+                        if (Number.isNaN(n)) return;
+                        setTicketQty(Math.max(1, Math.min(n, Math.max(1, ev.available_tickets))));
+                      }}
+                      className="w-full rounded-lg border border-border-green px-3 py-2 text-sm font-semibold"
+                    />
+                    <p className="mt-1 text-xs text-subtext-leaf">{ev.available_tickets} seats available</p>
+                  </div>
+
+                  <div className="rounded-lg bg-neutral-bg px-3 py-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-subtext-leaf">Price per ticket</span>
+                      <span className="font-bold">{priceLabel}</span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between">
+                      <span className="text-subtext-leaf">Total</span>
+                      <span className="text-base font-black">
+                        {ev.ticket_price <= 0 ? "Free" : `$${(ev.ticket_price * ticketQty).toFixed(2)}`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowBuyModal(false)}
+                    className="rounded-lg border border-border-green px-4 py-2 text-sm font-bold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={buyBusy || ev.available_tickets <= 0}
+                    onClick={() => void handleBuyTickets()}
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-black text-background-dark disabled:opacity-50"
+                  >
+                    {buyBusy ? "Purchasing..." : "Buy now"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -27,6 +27,8 @@ type EventRepository interface {
 	// ListSavedByUser returns published public events bookmarked by the user.
 	ListSavedByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Event, error)
 	GetEcoAttributeNamesByEventID(ctx context.Context, eventID uuid.UUID) ([]string, error)
+	BuyTicket(ctx context.Context, eventID, userID uuid.UUID, ticketType string, quantity int) ([]models.Ticket, int, error)
+	ListTicketsByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Ticket, error)
 }
 
 // VenueRepository is the subset of venue persistence used by HTTP handlers.
