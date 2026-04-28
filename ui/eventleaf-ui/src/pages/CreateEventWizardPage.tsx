@@ -4,11 +4,15 @@ import { OrganizerSidebar } from "../components/organizer/OrganizerSidebar";
 import { EcoCertifiedBadge } from "../components/organizer/EcoCertifiedBadge";
 import {
   createEvent,
+  fetchEventById,
   fetchCurrentUser,
   fetchEcoAttributes,
   fetchVenues,
   normalizeTimeForApi,
+  publishEventById,
+  updateDraftEventById,
   type ApiEcoAttribute,
+  type ApiEvent,
   type ApiVenue,
 } from "../api/eventleafApi";
 import {
@@ -88,7 +92,7 @@ const STEPS = [
   { id: 4, title: "Eco preview", subtitle: "Live score & badges" },
 ] as const;
 
-type LocationState = { preselectedVenueId?: string; selectedVenue?: { id: string; name: string; location: string } };
+type LocationState = { preselectedVenueId?: string; selectedVenue?: { id: string; name: string; location: string }; editEvent?: ApiEvent };
 
 function LiveLeafMeter({ percent, label }: { percent: number; label: string }) {
   const p = Math.min(100, Math.max(0, percent));
@@ -133,6 +137,8 @@ export function CreateEventWizardPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState | null;
+  const editEventId = state?.editEvent?.id ?? null;
+  const initializedFromDraftRef = useRef(false);
 
   const [step, setStep] = useState(1);
   const [eventName, setEventName] = useState("");
@@ -194,6 +200,48 @@ export function CreateEventWizardPage() {
       setVenueQuery(w.name);
     }
   }, [state?.preselectedVenueId, state?.selectedVenue?.id, allVenues]);
+
+  useEffect(() => {
+    if (!editEventId || initializedFromDraftRef.current || allVenues.length === 0) return;
+    let cancelled = false;
+
+    fetchEventById(editEventId)
+      .then((event) => {
+        if (cancelled) return;
+        setEventName(event.title || "");
+        setCategory(event.category || EVENT_CATEGORIES[0]);
+        setDescription(event.description || "");
+        setEventDate((event.event_date || "").slice(0, 10) || tomorrowISODate());
+        setEventStartTime((event.event_start_time || "").slice(0, 5) || "10:00");
+        setEventEndTime((event.event_end_time || "").slice(0, 5) || "18:00");
+        setTicketPrice(event.ticket_price ?? 0);
+        setTotalCapacity(event.total_capacity ?? 100);
+        setDigitalOnlyTicketing(Boolean(event.has_digital_ticketing));
+        setOnSiteRecycling((event.eco_attribute_names ?? []).includes("Zero Single-Use Plastics"));
+        setZeroWasteCatering((event.eco_attribute_names ?? []).includes("Waste Reduction Program"));
+        setPublicTransportIncentives(
+          Boolean(event.has_public_transit) || (event.eco_attribute_names ?? []).includes("Carbon Neutral Transport")
+        );
+        if (event.venue_id) {
+          const match = allVenues.find((v) => v.id === event.venue_id);
+          if (match) {
+            const w = mapApiVenueToWizard(match);
+            setVenue(w);
+            setVenueQuery(w.name);
+          }
+        }
+        initializedFromDraftRef.current = true;
+      })
+      .catch(() => {
+        if (!cancelled) {
+          initializedFromDraftRef.current = true;
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editEventId, allVenues]);
 
   useEffect(() => {
     return () => {
@@ -323,10 +371,9 @@ export function CreateEventWizardPage() {
         description.trim().slice(0, 800) ||
         "Event created with EventLeaf sustainability checklist.";
 
-      const res = await createEvent({
+      const payload = {
         title: eventName.trim(),
         description: description.trim(),
-        organizer_id: organizerId,
         venue_id: venue.id,
         event_date: eventDate,
         event_start_time: normalizeTimeForApi(eventStartTime),
@@ -334,18 +381,36 @@ export function CreateEventWizardPage() {
         eco_summary: ecoSummary,
         ticket_price: ticketPrice,
         total_capacity: totalCapacity,
-        status,
         visibility: "public",
         category,
         eco_attribute_ids: ecoIds,
-      });
-      if (status === "draft") {
-        navigate("/organizer/events", {
-          replace: false,
-          state: { draftSaved: true, eventTitle: res.event.title, newEvent: res.event },
-        });
+      };
+
+      if (editEventId) {
+        const updated = await updateDraftEventById(editEventId, payload);
+        if (status === "draft") {
+          navigate("/organizer/events", {
+            replace: false,
+            state: { draftSaved: true, eventTitle: updated.event.title, newEvent: updated.event },
+          });
+        } else {
+          await publishEventById(editEventId);
+          navigate(`/events/${editEventId}`, { state: { created: true, isGreen: updated.is_green } });
+        }
       } else {
-        navigate(`/events/${res.event.id}`, { state: { created: true, isGreen: res.is_green } });
+        const res = await createEvent({
+          ...payload,
+          organizer_id: organizerId,
+          status,
+        });
+        if (status === "draft") {
+          navigate("/organizer/events", {
+            replace: false,
+            state: { draftSaved: true, eventTitle: res.event.title, newEvent: res.event },
+          });
+        } else {
+          navigate(`/events/${res.event.id}`, { state: { created: true, isGreen: res.is_green } });
+        }
       }
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : "Could not save event");
@@ -373,7 +438,9 @@ export function CreateEventWizardPage() {
                 <span className="material-symbols-outlined">arrow_back</span>
               </Link>
               <div className="min-w-0">
-                <h1 className="text-base sm:text-lg font-bold text-text-leaf dark:text-white truncate">Create event</h1>
+                <h1 className="text-base sm:text-lg font-bold text-text-leaf dark:text-white truncate">
+                  {editEventId ? "Edit draft event" : "Create event"}
+                </h1>
                 <p className="text-xs text-subtext-leaf truncate">Guided setup · green venues · eco badges</p>
               </div>
             </div>

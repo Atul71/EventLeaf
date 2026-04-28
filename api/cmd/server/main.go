@@ -114,8 +114,10 @@ func main() {
 		protected.DELETE("/me/saved-events/:eventId", favoriteHandler.RemoveSavedEvent)
 		// List all events for the signed-in organizer (draft + live). Alias for proxies/clients that prefer this path.
 		protected.GET("/organizer/events", eventHandler.ListMyEvents)
+		protected.GET("/organizer/analytics", eventHandler.ListOrganizerAnalytics)
 		protected.GET("/me/events", eventHandler.ListMyEvents)
 		protected.POST("/events", eventHandler.CreateEvent)
+		protected.PUT("/events/:id", eventHandler.UpdateDraftEvent)
 		protected.POST("/events/:id/publish", eventHandler.PublishEvent)
 		protected.POST("/events/:id/tickets", eventHandler.BuyTicket)
 	}

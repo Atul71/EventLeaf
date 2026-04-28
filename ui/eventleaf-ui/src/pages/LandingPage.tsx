@@ -6,13 +6,6 @@ import { Logo } from "../components/Logo";
 const HERO_IMAGE =
   "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1200&q=80";
 
-const STATS = [
-  { label: "Metric 1", value: "—", change: "" },
-  { label: "Metric 2", value: "—", change: "" },
-  { label: "Metric 3", value: "—", change: "" },
-  { label: "Metric 4", value: "—", change: "" },
-] as const;
-
 const FEATURES = [
   {
     icon: "confirmation_number",
@@ -82,20 +75,7 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section id="features" className="py-12 border-y border-border-green dark:border-white/10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {STATS.map(({ label, value, change }) => (
-              <div key={label} className="text-center md:text-left">
-                <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mb-1">{label}</p>
-                <p className="text-3xl font-black dark:text-white">
-                  {value} <span className="text-primary text-xl tracking-tight">{change}</span>
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="py-24">
+        <section id="features" className="py-24">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-black mb-4 dark:text-white">Built for a Sustainable Future</h2>
             <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
@@ -133,7 +113,7 @@ export function LandingPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link
-                  to="/signup"
+                  to="/organizer/events/create"
                   className="bg-primary text-background-dark px-10 py-4 rounded-xl text-lg font-bold hover:scale-105 transition-transform text-center"
                 >
                   Create Your Event

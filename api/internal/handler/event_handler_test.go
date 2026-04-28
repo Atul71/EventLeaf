@@ -17,11 +17,11 @@ import (
 )
 
 type fakeEventRepo struct {
-	createFn    func(ctx context.Context, req *models.CreateEventRequest, green bool) (*models.Event, error)
-	getFn       func(ctx context.Context, id uuid.UUID) (*models.Event, error)
-	listFn      func(ctx context.Context, limit, offset int) ([]models.Event, error)
-	listSavedFn func(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Event, error)
-	buyFn       func(ctx context.Context, eventID, userID uuid.UUID, ticketType string, quantity int) ([]models.Ticket, int, error)
+	createFn      func(ctx context.Context, req *models.CreateEventRequest, green bool) (*models.Event, error)
+	getFn         func(ctx context.Context, id uuid.UUID) (*models.Event, error)
+	listFn        func(ctx context.Context, limit, offset int) ([]models.Event, error)
+	listSavedFn   func(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Event, error)
+	buyFn         func(ctx context.Context, eventID, userID uuid.UUID, ticketType string, quantity int) ([]models.Ticket, int, error)
 	listTicketsFn func(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Ticket, error)
 }
 
@@ -54,11 +54,28 @@ func (f *fakeEventRepo) PublishForOrganizer(ctx context.Context, eventID, organi
 	return nil, pgx.ErrNoRows
 }
 
+func (f *fakeEventRepo) UpdateDraftForOrganizer(
+	ctx context.Context,
+	eventID, organizerID uuid.UUID,
+	req *models.UpdateEventRequest,
+	isEcoFriendly bool,
+) (*models.Event, error) {
+	return nil, pgx.ErrNoRows
+}
+
 func (f *fakeEventRepo) ListSavedByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Event, error) {
 	if f.listSavedFn != nil {
 		return f.listSavedFn(ctx, userID, limit, offset)
 	}
 	return []models.Event{}, nil
+}
+
+func (f *fakeEventRepo) ListOrganizerAnalytics(
+	ctx context.Context,
+	organizerID uuid.UUID,
+	limit, offset int,
+) ([]models.OrganizerEventAnalytics, error) {
+	return []models.OrganizerEventAnalytics{}, nil
 }
 
 func (f *fakeEventRepo) GetEcoAttributeNamesByEventID(ctx context.Context, eventID uuid.UUID) ([]string, error) {
@@ -101,8 +118,8 @@ func (f *fakeVenueRepo) Update(ctx context.Context, id uuid.UUID, req *models.Up
 func (f *fakeVenueRepo) Delete(ctx context.Context, id uuid.UUID) error { return nil }
 
 type fakeEcoRepo struct {
-	namesFn  func(ctx context.Context, ids []uuid.UUID) ([]string, error)
-	listFn   func(ctx context.Context) ([]models.EcoAttribute, error)
+	namesFn func(ctx context.Context, ids []uuid.UUID) ([]string, error)
+	listFn  func(ctx context.Context) ([]models.EcoAttribute, error)
 }
 
 func (f *fakeEcoRepo) GetNamesByIDs(ctx context.Context, ids []uuid.UUID) ([]string, error) {

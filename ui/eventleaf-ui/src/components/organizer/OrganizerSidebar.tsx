@@ -7,6 +7,7 @@ const ORGANIZER_AVATAR =
 const navItems = [
   { path: "/organizer", icon: "dashboard", label: "Overview" },
   { path: "/organizer/events", icon: "event", label: "My Events" },
+  { path: "/organizer/analytics", icon: "monitoring", label: "Event Analytics" },
   { path: "/organizer/venues", icon: "location_on", label: "Browse Sustainable Venues" },
 ];
 
@@ -23,6 +24,8 @@ export function OrganizerSidebar() {
           const isActive =
             item.path === "/organizer/events"
               ? location.pathname.startsWith("/organizer/events")
+              : item.path === "/organizer/analytics"
+                ? location.pathname.startsWith("/organizer/analytics")
               : location.pathname === item.path;
           return (
             <Link

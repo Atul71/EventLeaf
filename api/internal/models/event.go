@@ -23,6 +23,21 @@ type CreateEventRequest struct {
 	EcoAttributeIDs []uuid.UUID `json:"eco_attribute_ids"`
 }
 
+type UpdateEventRequest struct {
+	Title           string      `json:"title" binding:"required,max=255"`
+	Description     string      `json:"description" binding:"required"`
+	VenueID         *uuid.UUID  `json:"venue_id"`
+	EventDate       string      `json:"event_date" binding:"required"`
+	EventStartTime  string      `json:"event_start_time" binding:"required"`
+	EventEndTime    string      `json:"event_end_time" binding:"required"`
+	EcoSummary      string      `json:"eco_summary"`
+	TicketPrice     float64     `json:"ticket_price" binding:"gte=0"`
+	TotalCapacity   int         `json:"total_capacity" binding:"gt=0"`
+	Visibility      string      `json:"visibility"`
+	Category        string      `json:"category"`
+	EcoAttributeIDs []uuid.UUID `json:"eco_attribute_ids"`
+}
+
 type Event struct {
 	ID                  uuid.UUID  `json:"id"`
 	Title               string     `json:"title"`
@@ -66,4 +81,17 @@ type CreateEventResponse struct {
 	NotGreenReasons     []string      `json:"green_criteria_not_met,omitempty"`
 	CalendarSyncError   string        `json:"calendar_sync_error,omitempty"`
 	CalendarICSPath     string        `json:"calendar_ics_path,omitempty"`
+}
+
+type OrganizerEventAnalytics struct {
+	EventID          uuid.UUID `json:"event_id"`
+	Title            string    `json:"title"`
+	EventDate        time.Time `json:"event_date"`
+	Status           string    `json:"status"`
+	IsEcoFriendly    bool      `json:"is_eco_friendly"`
+	TotalCapacity    int       `json:"total_capacity"`
+	TicketsSold      int       `json:"tickets_sold"`
+	CheckedInCount   int       `json:"checked_in_count"`
+	Revenue          float64   `json:"revenue"`
+	AvailableTickets int       `json:"available_tickets"`
 }

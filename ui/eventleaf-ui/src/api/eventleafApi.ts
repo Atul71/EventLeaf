@@ -83,6 +83,19 @@ export type ApiTicket = {
   venue_name?: string | null;
 };
 
+export type OrganizerEventAnalytics = {
+  event_id: string;
+  title: string;
+  event_date: string;
+  status: string;
+  is_eco_friendly: boolean;
+  total_capacity: number;
+  tickets_sold: number;
+  checked_in_count: number;
+  revenue: number;
+  available_tickets: number;
+};
+
 export type BuyTicketsPayload = {
   ticket_type?: string;
   quantity?: number;
@@ -105,6 +118,21 @@ export type CreateEventPayload = {
   ticket_price: number;
   total_capacity: number;
   status?: string;
+  visibility?: string;
+  category?: string;
+  eco_attribute_ids?: string[];
+};
+
+export type UpdateEventPayload = {
+  title: string;
+  description: string;
+  venue_id?: string | null;
+  event_date: string;
+  event_start_time: string;
+  event_end_time: string;
+  eco_summary?: string;
+  ticket_price: number;
+  total_capacity: number;
   visibility?: string;
   category?: string;
   eco_attribute_ids?: string[];
@@ -275,6 +303,12 @@ export async function fetchMyEvents(limit = 200): Promise<ApiEvent[]> {
   );
 }
 
+export async function fetchOrganizerAnalytics(limit = 200): Promise<OrganizerEventAnalytics[]> {
+  const res = await fetch(`${API_PREFIX}/organizer/analytics?limit=${limit}&offset=0`, { credentials: "include" });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json() as Promise<OrganizerEventAnalytics[]>;
+}
+
 export async function fetchEventById(id: string): Promise<ApiEvent> {
   const res = await fetch(`${API_PREFIX}/events/${encodeURIComponent(id)}`, { credentials: "include" });
   if (!res.ok) throw new Error(await parseError(res));
@@ -293,6 +327,17 @@ export async function publishEventById(id: string): Promise<CreateEventResponse>
 export async function createEvent(body: CreateEventPayload): Promise<CreateEventResponse> {
   const res = await fetch(`${API_PREFIX}/events`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json() as Promise<CreateEventResponse>;
+}
+
+export async function updateDraftEventById(id: string, body: UpdateEventPayload): Promise<CreateEventResponse> {
+  const res = await fetch(`${API_PREFIX}/events/${encodeURIComponent(id)}`, {
+    method: "PUT",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify(body),

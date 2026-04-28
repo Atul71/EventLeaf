@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { OrganizerSidebar } from "../components/organizer/OrganizerSidebar";
 import { fetchCurrentUser, fetchMyEvents, publishEventById, type ApiEvent } from "../api/eventleafApi";
 
-type CreateEventState = { selectedVenue?: { id: string; name: string; location: string } };
+type CreateEventState = { selectedVenue?: { id: string; name: string; location: string }; editEvent?: ApiEvent };
 type WizardReturnState = { draftSaved?: boolean; eventTitle?: string; newEvent?: ApiEvent };
 
 export function OrganizerPlaceholderPage() {
@@ -255,6 +255,13 @@ export function OrganizerPlaceholderPage() {
                                 className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:underline"
                               >
                                 Preview <span className="material-symbols-outlined text-sm">visibility</span>
+                              </Link>
+                              <Link
+                                to="/organizer/events/create"
+                                state={{ editEvent: e }}
+                                className="inline-flex items-center gap-1 rounded-lg border border-border-green px-3 py-1.5 text-sm font-bold hover:bg-soft-green/60 dark:border-white/20 dark:hover:bg-white/10"
+                              >
+                                Edit <span className="material-symbols-outlined text-sm">edit</span>
                               </Link>
                               <button
                                 type="button"
