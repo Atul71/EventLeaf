@@ -306,13 +306,12 @@ export function ProfilePage() {
                 >
                   Edit Profile
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("impact")}
+                <Link
+                  to="/profile/impact-history"
                   className="inline-flex items-center justify-center rounded-lg border border-border-leaf bg-neutral-bg px-4 py-2 text-sm font-bold text-text-leaf transition-colors hover:bg-soft-green flex-1 sm:flex-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
                 >
                   View impact
-                </button>
+                </Link>
               </div>
             </div>
           </div>
