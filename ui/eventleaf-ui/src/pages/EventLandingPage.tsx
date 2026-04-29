@@ -437,7 +437,6 @@ export function EventLandingPage() {
                 Share Event
               </button>
             </div>
-            {buyErr ? <p className="text-sm font-semibold text-red-700 dark:text-red-300">{buyErr}</p> : null}
             {buyMsg ? <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{buyMsg}</p> : null}
           </div>
 
@@ -595,6 +594,11 @@ export function EventLandingPage() {
                 Close
               </button>
             </div>
+            {buyErr ? (
+              <div className="mt-4 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-800 dark:border-red-700 dark:bg-red-950/40 dark:text-red-200">
+                {buyErr}
+              </div>
+            ) : null}
 
             {buyMsg ? (
               <div className="mt-5 space-y-4">
