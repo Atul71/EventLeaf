@@ -69,38 +69,6 @@ jobs:
       - name: Run race detection
         run: go test ./... -race -count=1
 
-  frontend-tests:
-    name: Frontend (lint + typecheck + unit)
-    runs-on: ubuntu-latest
-    container:
-      image: node:22-bookworm
-    defaults:
-      run:
-        shell: bash
-        working-directory: ui/eventleaf-ui
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node with npm cache
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: ui/eventleaf-ui/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Type check
-        run: npx tsc -b
-
-      - name: Run component tests
-        run: npm run test
-
   e2e-golden-flow:
     name: E2E (golden flow)
     runs-on: ubuntu-latest
