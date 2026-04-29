@@ -11,6 +11,7 @@ import { EventLandingPage } from "./pages/EventLandingPage";
 import { DiscoverEventsPage } from "./pages/DiscoverEventsPage";
 import { CreateEventWizardPage } from "./pages/CreateEventWizardPage";
 import { OrganizerAnalyticsPage } from "./pages/OrganizerAnalyticsPage";
+import { ImpactHistoryPage } from "./pages/ImpactHistoryPage";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile/impact-history" element={<ImpactHistoryPage />} />
         <Route path="/profile/edit" element={<EditProfilePage />} />
         <Route path="/organizer" element={<OrganizerDashboardPage />} />
         <Route path="/organizer/venues" element={<VenueBrowserPage />} />
