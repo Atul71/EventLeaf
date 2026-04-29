@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"time"
 
 	"github.com/Atul71/EventLeaf/api/internal/models"
 	"github.com/google/uuid"
@@ -32,6 +33,11 @@ type EventRepository interface {
 	GetEcoAttributeNamesByEventID(ctx context.Context, eventID uuid.UUID) ([]string, error)
 	BuyTicket(ctx context.Context, eventID, userID uuid.UUID, ticketType string, quantity int) ([]models.Ticket, int, error)
 	ListTicketsByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Ticket, error)
+	CheckInTicketForOrganizer(
+		ctx context.Context,
+		eventID, organizerID uuid.UUID,
+		qrCodeValue, ticketNumber, method, notes string,
+	) (*models.Ticket, time.Time, bool, error)
 }
 
 // VenueRepository is the subset of venue persistence used by HTTP handlers.
