@@ -23,6 +23,7 @@ type fakeEventRepo struct {
 	listSavedFn   func(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Event, error)
 	buyFn         func(ctx context.Context, eventID, userID uuid.UUID, ticketType string, quantity int) ([]models.Ticket, int, error)
 	listTicketsFn func(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Ticket, error)
+	checkInFn     func(ctx context.Context, eventID, organizerID uuid.UUID, qrCodeValue, ticketNumber, method, notes string) (*models.Ticket, time.Time, bool, error)
 }
 
 func (f *fakeEventRepo) Create(ctx context.Context, req *models.CreateEventRequest, isEcoFriendly bool) (*models.Event, error) {
@@ -94,6 +95,17 @@ func (f *fakeEventRepo) ListTicketsByUser(ctx context.Context, userID uuid.UUID,
 		return f.listTicketsFn(ctx, userID, limit, offset)
 	}
 	return []models.Ticket{}, nil
+}
+
+func (f *fakeEventRepo) CheckInTicketForOrganizer(
+	ctx context.Context,
+	eventID, organizerID uuid.UUID,
+	qrCodeValue, ticketNumber, method, notes string,
+) (*models.Ticket, time.Time, bool, error) {
+	if f.checkInFn != nil {
+		return f.checkInFn(ctx, eventID, organizerID, qrCodeValue, ticketNumber, method, notes)
+	}
+	return nil, time.Time{}, false, pgx.ErrNoRows
 }
 
 type fakeVenueRepo struct {
@@ -321,6 +333,55 @@ func TestListMyTickets_OK(t *testing.T) {
 	c.Request = httptest.NewRequest(http.MethodGet, "/me/tickets", nil)
 
 	h.ListMyTickets(c)
+	if w.Code != http.StatusOK {
+		t.Fatalf("code %d body %s", w.Code, w.Body.String())
+	}
+}
+
+func TestCheckInTicket_OK(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	eventID := uuid.New()
+	organizerID := uuid.New()
+	ticketID := uuid.New()
+	now := time.Now().UTC()
+
+	repo := &fakeEventRepo{
+		checkInFn: func(
+			ctx context.Context,
+			eid, oid uuid.UUID,
+			qrCodeValue, ticketNumber, method, notes string,
+		) (*models.Ticket, time.Time, bool, error) {
+			if eid != eventID || oid != organizerID {
+				t.Fatalf("unexpected ids eid=%s oid=%s", eid, oid)
+			}
+			if qrCodeValue == "" {
+				t.Fatalf("expected qr_code_value")
+			}
+			return &models.Ticket{
+				ID:           ticketID,
+				UserID:       uuid.New(),
+				EventID:      eventID,
+				TicketNumber: "EL-123",
+				TicketType:   "general",
+				Status:       "used",
+				QRCodeValue:  "eventleaf:ticket:" + ticketID.String(),
+			}, now, false, nil
+		},
+	}
+
+	h := NewEventHandler(repo, &fakeVenueRepo{}, &fakeEcoRepo{}, nil, "America/New_York")
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Set(middleware.ContextUserIDKey, organizerID.String())
+	c.Request = httptest.NewRequest(
+		http.MethodPost,
+		"/events/"+eventID.String()+"/check-in",
+		bytes.NewBufferString(`{"qr_code_value":"eventleaf:ticket:abc","check_in_method":"qr_scan"}`),
+	)
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Params = gin.Params{{Key: "id", Value: eventID.String()}}
+
+	h.CheckInTicket(c)
 	if w.Code != http.StatusOK {
 		t.Fatalf("code %d body %s", w.Code, w.Body.String())
 	}

@@ -513,6 +513,63 @@ func (h *EventHandler) ListMyTickets(c *gin.Context) {
 	c.JSON(http.StatusOK, tickets)
 }
 
+// CheckInTicket marks one ticket as checked-in for an event owned by the signed-in organizer.
+func (h *EventHandler) CheckInTicket(c *gin.Context) {
+	uid, ok := authUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing auth"})
+		return
+	}
+
+	eventID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	var req models.CheckInTicketRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: " + err.Error()})
+		return
+	}
+	req.CheckInMethod = strings.TrimSpace(req.CheckInMethod)
+	if req.CheckInMethod == "" {
+		req.CheckInMethod = "qr_scan"
+	}
+	if req.CheckInMethod != "qr_scan" && req.CheckInMethod != "manual" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "check_in_method must be either 'qr_scan' or 'manual'"})
+		return
+	}
+	if strings.TrimSpace(req.QRCodeValue) == "" && strings.TrimSpace(req.TicketNumber) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Provide either qr_code_value or ticket_number"})
+		return
+	}
+
+	ticket, checkedInAt, alreadyUsed, err := h.eventRepo.CheckInTicketForOrganizer(
+		c.Request.Context(),
+		eventID,
+		uid,
+		req.QRCodeValue,
+		req.TicketNumber,
+		req.CheckInMethod,
+		req.Notes,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found for this organizer event"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check in ticket: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.CheckInTicketResponse{
+		Ticket:      *ticket,
+		CheckedInAt: checkedInAt,
+		AlreadyUsed: alreadyUsed,
+	})
+}
+
 // ListEcoAttributes godoc
 // @Summary      List eco attributes
 // @Description  Returns all eco attributes (use IDs when creating events)

@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/Atul71/EventLeaf/api/internal/db"
 	"github.com/Atul71/EventLeaf/api/internal/models"
@@ -573,6 +575,90 @@ func (r *EventRepository) ListTicketsByUser(ctx context.Context, userID uuid.UUI
 		out = append(out, t)
 	}
 	return out, rows.Err()
+}
+
+func (r *EventRepository) CheckInTicketForOrganizer(
+	ctx context.Context,
+	eventID, organizerID uuid.UUID,
+	qrCodeValue, ticketNumber, method, notes string,
+) (*models.Ticket, time.Time, bool, error) {
+	trimmedQR := strings.TrimSpace(qrCodeValue)
+	trimmedTicket := strings.TrimSpace(ticketNumber)
+	if trimmedQR == "" && trimmedTicket == "" {
+		return nil, time.Time{}, false, pgx.ErrNoRows
+	}
+
+	if method == "" {
+		method = "qr_scan"
+	}
+
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, time.Time{}, false, err
+	}
+	defer tx.Rollback(ctx)
+
+	var ticket models.Ticket
+	var existingCheckInID sql.NullString
+	var existingCheckedInAt sql.NullTime
+
+	err = tx.QueryRow(ctx, `
+		SELECT
+			t.id, t.user_id, t.event_id, t.ticket_number, t.ticket_type, t.status, t.price_paid,
+			t.purchase_date, t.created_at, t.updated_at,
+			ci.id, ci.checked_in_at
+		FROM tickets t
+		INNER JOIN events e ON e.id = t.event_id
+		LEFT JOIN check_ins ci ON ci.ticket_id = t.id AND ci.event_id = e.id
+		WHERE e.id = $1
+		  AND e.organizer_id = $2
+		  AND (
+			($3 <> '' AND ('eventleaf:ticket:' || t.id::text) = $3)
+			OR ($4 <> '' AND t.ticket_number = $4)
+		  )
+		ORDER BY ci.checked_in_at DESC NULLS LAST
+		LIMIT 1
+	`, eventID, organizerID, trimmedQR, trimmedTicket).Scan(
+		&ticket.ID, &ticket.UserID, &ticket.EventID, &ticket.TicketNumber, &ticket.TicketType, &ticket.Status, &ticket.PricePaid,
+		&ticket.PurchaseDate, &ticket.CreatedAt, &ticket.UpdatedAt,
+		&existingCheckInID, &existingCheckedInAt,
+	)
+	if err != nil {
+		return nil, time.Time{}, false, err
+	}
+	ticket.QRCodeValue = fmt.Sprintf("eventleaf:ticket:%s", ticket.ID.String())
+
+	if existingCheckInID.Valid && existingCheckedInAt.Valid {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, time.Time{}, false, err
+		}
+		return &ticket, existingCheckedInAt.Time, true, nil
+	}
+
+	var checkedInAt time.Time
+	err = tx.QueryRow(ctx, `
+		INSERT INTO check_ins (ticket_id, event_id, check_in_method, checked_in_by, notes)
+		VALUES ($1, $2, $3, $4, NULLIF($5, ''))
+		RETURNING checked_in_at
+	`, ticket.ID, eventID, method, organizerID, strings.TrimSpace(notes)).Scan(&checkedInAt)
+	if err != nil {
+		return nil, time.Time{}, false, err
+	}
+
+	_, err = tx.Exec(ctx, `
+		UPDATE tickets
+		SET status = 'used', updated_at = NOW()
+		WHERE id = $1 AND status = 'active'
+	`, ticket.ID)
+	if err != nil {
+		return nil, time.Time{}, false, err
+	}
+	ticket.Status = "used"
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, time.Time{}, false, err
+	}
+	return &ticket, checkedInAt, false, nil
 }
 
 func emptyToNull(s string) interface{} {

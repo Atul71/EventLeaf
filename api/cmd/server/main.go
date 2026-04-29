@@ -122,6 +122,7 @@ func main() {
 		protected.PUT("/events/:id", eventHandler.UpdateDraftEvent)
 		protected.POST("/events/:id/publish", eventHandler.PublishEvent)
 		protected.POST("/events/:id/tickets", eventHandler.BuyTicket)
+		protected.POST("/events/:id/check-in", eventHandler.CheckInTicket)
 	}
 
 	srv := &http.Server{

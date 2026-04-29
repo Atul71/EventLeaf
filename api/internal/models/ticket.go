@@ -17,6 +17,21 @@ type BuyTicketResponse struct {
 	RemainingTickets int      `json:"remaining_tickets"`
 }
 
+type CheckInTicketRequest struct {
+	// Either qr_code_value (preferred) or ticket_number can be provided.
+	QRCodeValue  string `json:"qr_code_value"`
+	TicketNumber string `json:"ticket_number"`
+	// Optional: "qr_scan" (default) or "manual".
+	CheckInMethod string `json:"check_in_method"`
+	Notes         string `json:"notes"`
+}
+
+type CheckInTicketResponse struct {
+	Ticket      Ticket    `json:"ticket"`
+	CheckedInAt time.Time `json:"checked_in_at"`
+	AlreadyUsed bool      `json:"already_used"`
+}
+
 type Ticket struct {
 	ID           uuid.UUID `json:"id"`
 	UserID       uuid.UUID `json:"user_id"`
