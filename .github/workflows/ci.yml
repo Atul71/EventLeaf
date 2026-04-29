@@ -1,0 +1,134 @@
+name: EventLeaf CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - main
+      - develop
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-tests:
+    name: Backend (Go tests + race)
+    runs-on: ubuntu-latest
+    container:
+      image: golang:1.25
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: eventleaf_user
+          POSTGRES_PASSWORD: eventleaf_password
+          POSTGRES_DB: eventleaf_db
+        options: >-
+          --health-cmd "pg_isready -U eventleaf_user -d eventleaf_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        shell: bash
+        working-directory: api
+    env:
+      APP_PORT: "3000"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: eventleaf_db
+      DB_USER: eventleaf_user
+      DB_PASSWORD: eventleaf_password
+      JWT_SECRET: dev-insecure-secret-change-me
+      AUTH_COOKIE_SECURE: "false"
+      AUTH_COOKIE_NAME: eventleaf_session
+      GOOGLE_CALENDAR_TIMEZONE: America/New_York
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore Go cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            /go/pkg/mod
+            /root/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('api/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run unit and integration tests
+        run: go test ./... -v
+
+      - name: Run race detection
+        run: go test ./... -race -count=1
+
+  frontend-tests:
+    name: Frontend (lint + typecheck + unit)
+    runs-on: ubuntu-latest
+    container:
+      image: node:22-bookworm
+    defaults:
+      run:
+        shell: bash
+        working-directory: ui/eventleaf-ui
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node with npm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ui/eventleaf-ui/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc -b
+
+      - name: Run component tests
+        run: npm run test
+
+  e2e-golden-flow:
+    name: E2E (golden flow)
+    runs-on: ubuntu-latest
+    container:
+      image: cypress/included:15.1.0
+    defaults:
+      run:
+        shell: bash
+        working-directory: ui/eventleaf-ui
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node with npm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ui/eventleaf-ui/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Cypress green-path tests
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: ui/eventleaf-ui
+          start: npm run dev:e2e -- --host 0.0.0.0 --port 5173
+          wait-on: http://127.0.0.1:5173
+          wait-on-timeout: 120
+          spec: cypress/e2e/discover_events.cy.cjs,cypress/e2e/buy_tickets.cy.cjs
