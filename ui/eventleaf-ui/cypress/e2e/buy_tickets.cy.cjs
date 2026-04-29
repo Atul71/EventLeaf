@@ -38,11 +38,28 @@ describe("Buy tickets flow", () => {
     has_public_transit: true,
   };
 
-  it("opens buy modal, shows total cost, purchases, and shows QR + profile link", () => {
+  it("executes payment gateway then purchases and shows QR + profile link", () => {
     cy.intercept("GET", `/api/v1/events/${eventId}`, {
       statusCode: 200,
       body: eventBody,
     }).as("getEvent");
+
+    cy.intercept("POST", "/api/v1/payments", (req) => {
+      expect(req.body).to.deep.include({
+        expiry_month: 12,
+        expiry_year: 2030,
+        cvv: "123",
+        amount: 50,
+      });
+      expect(String(req.body.card_number).replace(/\s/g, "")).to.eq("4242424242424242");
+      req.reply({
+        statusCode: 200,
+        body: {
+          status: "approved",
+          transaction_id: "txn_test_123",
+        },
+      });
+    }).as("processPayment");
 
     cy.intercept("POST", `/api/v1/events/${eventId}/tickets`, (req) => {
       expect(req.body).to.deep.include({ ticket_type: "general", quantity: 2 });
@@ -88,10 +105,13 @@ describe("Buy tickets flow", () => {
     cy.contains("button", "Get Tickets").click();
     cy.contains("h3", "Buy tickets").should("be.visible");
 
-    cy.get("#buy-ticket-qty").clear().type("2");
-    cy.contains("div", "Total").parent().contains("$50.00").should("be.visible");
+    cy.get("#buy-ticket-qty").click().type("{selectall}2");
+    cy.contains("label", "Card number").parent().find("input").type("4242424242424242");
+    cy.contains("label", "Expiry").parent().find("input").type("1230");
+    cy.contains("label", "CVV").parent().find("input").type("123");
 
-    cy.contains("button", "Buy now").click();
+    cy.contains("button", "Pay & buy now").click();
+    cy.wait("@processPayment");
     cy.wait("@buyTickets");
 
     cy.contains("Purchased 2 tickets.").should("be.visible");

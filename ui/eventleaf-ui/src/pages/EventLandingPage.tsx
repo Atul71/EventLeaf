@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { Link, useParams } from "react-router-dom";
+import { usePaymentInputs } from "react-payment-inputs";
 import { Logo } from "../components/Logo";
 import { EcoCertifiedBadge } from "../components/organizer/EcoCertifiedBadge";
-import { buyTicketsByEventId, fetchEventById, publishEventById, type ApiEvent, type ApiTicket } from "../api/eventleafApi";
+import { buyTicketsByEventId, fetchEventById, processPayment, publishEventById, type ApiEvent, type ApiTicket } from "../api/eventleafApi";
 import {
   certificationsFromApi,
   ecoProofsFromApi,
@@ -78,6 +79,14 @@ export function EventLandingPage() {
   const [buyErr, setBuyErr] = useState<string | null>(null);
   const [buyMsg, setBuyMsg] = useState<string | null>(null);
   const [lastPurchasedTickets, setLastPurchasedTickets] = useState<ApiTicket[]>([]);
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiryInput, setExpiryInput] = useState("");
+  const [cvvInput, setCvvInput] = useState("");
+  const [cardTouched, setCardTouched] = useState(false);
+  const [expiryTouched, setExpiryTouched] = useState(false);
+  const [cvvTouched, setCvvTouched] = useState(false);
+  const [paymentStateMsg, setPaymentStateMsg] = useState<string | null>(null);
+  const { getCardNumberProps, getExpiryDateProps, getCVCProps } = usePaymentInputs();
 
   useEffect(() => {
     if (!resolvedEventId) {
@@ -235,11 +244,41 @@ export function EventLandingPage() {
 
   async function handleBuyTickets() {
     if (ev.available_tickets <= 0) return;
+    const totalAmount = ev.ticket_price * Math.max(1, Math.min(ticketQty, ev.available_tickets));
+    const cardValidationError = validateCardNumber(cardNumber);
+    const expiryValidationError = validateExpiry(expiryInput);
+    const cvvValidationError = validateCVV(cvvInput);
+    if (cardValidationError || expiryValidationError || cvvValidationError) {
+      setCardTouched(true);
+      setExpiryTouched(true);
+      setCvvTouched(true);
+      setBuyErr(cardValidationError ?? expiryValidationError ?? cvvValidationError);
+      return;
+    }
+
     setBuyBusy(true);
     setBuyErr(null);
     setBuyMsg(null);
+    setPaymentStateMsg("Contacting payment gateway...");
     try {
       const qty = Math.max(1, Math.min(ticketQty, ev.available_tickets));
+      const { month, year } = parseExpiry(expiryInput);
+      if (!month || !year) {
+        throw new Error("Please enter a valid expiry date.");
+      }
+
+      await Promise.all([
+        processPayment({
+          card_number: cardNumber,
+          expiry_month: month,
+          expiry_year: year,
+          cvv: cvvInput,
+          amount: Number(totalAmount.toFixed(2)),
+        }),
+        new Promise((resolve) => setTimeout(resolve, 1200 + Math.floor(Math.random() * 800))),
+      ]);
+
+      setPaymentStateMsg("Payment approved. Issuing ticket...");
       const resp = await buyTicketsByEventId(ev.id, { ticket_type: ticketType, quantity: qty });
       const purchasedTickets = Array.isArray((resp as unknown as { tickets?: unknown }).tickets) ? resp.tickets : [];
       const purchasedCount = purchasedTickets.length > 0 ? purchasedTickets.length : 1;
@@ -248,13 +287,24 @@ export function EventLandingPage() {
       setTicketQty((q) => Math.max(1, Math.min(q, Math.max(1, remaining))));
       setLastPurchasedTickets(purchasedTickets);
       setBuyMsg(`Purchased ${purchasedCount} ticket${purchasedCount === 1 ? "" : "s"}.`);
+      setCardNumber("");
+      setExpiryInput("");
+      setCvvInput("");
+      setCardTouched(false);
+      setExpiryTouched(false);
+      setCvvTouched(false);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Could not buy tickets";
       setBuyErr(msg.includes("Missing auth") || msg.includes("auth") ? "Please sign in to buy tickets." : msg);
     } finally {
       setBuyBusy(false);
+      setPaymentStateMsg(null);
     }
   }
+
+  const cardError = cardTouched ? validateCardNumber(cardNumber) : null;
+  const expiryError = expiryTouched ? validateExpiry(expiryInput) : null;
+  const cvvError = cvvTouched ? validateCVV(cvvInput) : null;
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark text-text-leaf">
@@ -387,7 +437,6 @@ export function EventLandingPage() {
                 Share Event
               </button>
             </div>
-            {buyErr ? <p className="text-sm font-semibold text-red-700 dark:text-red-300">{buyErr}</p> : null}
             {buyMsg ? <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{buyMsg}</p> : null}
           </div>
 
@@ -545,6 +594,11 @@ export function EventLandingPage() {
                 Close
               </button>
             </div>
+            {buyErr ? (
+              <div className="mt-4 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-800 dark:border-red-700 dark:bg-red-950/40 dark:text-red-200">
+                {buyErr}
+              </div>
+            ) : null}
 
             {buyMsg ? (
               <div className="mt-5 space-y-4">
@@ -634,6 +688,63 @@ export function EventLandingPage() {
                       </span>
                     </div>
                   </div>
+
+                  <div className="space-y-3 rounded-lg border border-border-green bg-white px-3 py-3">
+                    <p className="text-xs font-bold uppercase tracking-wide text-subtext-leaf">Secure checkout</p>
+                    <div>
+                      <label className="mb-1 block text-xs font-bold uppercase text-subtext-leaf">
+                        Card number
+                      </label>
+                      <input
+                        {...getCardNumberProps({
+                          onChange: (e: ChangeEvent<HTMLInputElement>) => setCardNumber(e.target.value),
+                          onBlur: () => setCardTouched(true),
+                        })}
+                        value={cardNumber}
+                        className="w-full rounded-lg border border-border-green px-3 py-2 text-sm font-semibold"
+                        placeholder="1234 5678 9012 3456"
+                      />
+                      {cardError ? <p className="mt-1 text-xs font-semibold text-red-700">{cardError}</p> : null}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="mb-1 block text-xs font-bold uppercase text-subtext-leaf">
+                          Expiry
+                        </label>
+                        <input
+                          {...getExpiryDateProps({
+                            onChange: (e: ChangeEvent<HTMLInputElement>) => setExpiryInput(e.target.value),
+                            onBlur: () => setExpiryTouched(true),
+                          })}
+                          value={expiryInput}
+                          className="w-full rounded-lg border border-border-green px-3 py-2 text-sm font-semibold"
+                          placeholder="MM/YY"
+                        />
+                        {expiryError ? <p className="mt-1 text-xs font-semibold text-red-700">{expiryError}</p> : null}
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-bold uppercase text-subtext-leaf">
+                          CVV
+                        </label>
+                        <input
+                          {...getCVCProps({
+                            onChange: (e: ChangeEvent<HTMLInputElement>) => setCvvInput(e.target.value),
+                            onBlur: () => setCvvTouched(true),
+                          })}
+                          value={cvvInput}
+                          className="w-full rounded-lg border border-border-green px-3 py-2 text-sm font-semibold"
+                          placeholder="123"
+                        />
+                        {cvvError ? <p className="mt-1 text-xs font-semibold text-red-700">{cvvError}</p> : null}
+                      </div>
+                    </div>
+                    {paymentStateMsg ? (
+                      <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-bold text-text-leaf">
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-text-leaf border-t-transparent" />
+                        {paymentStateMsg}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div className="mt-5 flex items-center justify-end gap-2">
@@ -646,11 +757,11 @@ export function EventLandingPage() {
                   </button>
                   <button
                     type="button"
-                    disabled={buyBusy || ev.available_tickets <= 0}
+                    disabled={buyBusy || ev.available_tickets <= 0 || Boolean(cardError || expiryError || cvvError)}
                     onClick={() => void handleBuyTickets()}
                     className="rounded-lg bg-primary px-4 py-2 text-sm font-black text-background-dark disabled:opacity-50"
                   >
-                    {buyBusy ? "Purchasing..." : "Buy now"}
+                    {buyBusy ? "Processing..." : "Pay & buy now"}
                   </button>
                 </div>
               </>
@@ -660,5 +771,44 @@ export function EventLandingPage() {
       )}
     </div>
   );
+}
+
+function digitsOnly(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
+function validateCardNumber(value: string): string | null {
+  const len = digitsOnly(value).length;
+  if (len === 0) return "Card number is required.";
+  if (len < 13 || len > 19) return "Card number length looks invalid.";
+  return null;
+}
+
+function validateCVV(value: string): string | null {
+  const len = digitsOnly(value).length;
+  if (len === 0) return "CVV is required.";
+  if (len < 3 || len > 4) return "CVV should be 3 or 4 digits.";
+  return null;
+}
+
+function validateExpiry(value: string): string | null {
+  const parsed = parseExpiry(value);
+  if (!parsed.month || !parsed.year) return "Expiry must be in MM/YY format.";
+  const now = new Date();
+  if (parsed.year < now.getFullYear() || (parsed.year === now.getFullYear() && parsed.month < now.getMonth() + 1)) {
+    return "Card appears expired.";
+  }
+  return null;
+}
+
+function parseExpiry(value: string): { month: number | null; year: number | null } {
+  const match = value.match(/^(\d{2})\s*\/\s*(\d{2})$/);
+  if (!match) return { month: null, year: null };
+  const month = Number.parseInt(match[1], 10);
+  const yy = Number.parseInt(match[2], 10);
+  if (Number.isNaN(month) || Number.isNaN(yy) || month < 1 || month > 12) {
+    return { month: null, year: null };
+  }
+  return { month, year: 2000 + yy };
 }
 
