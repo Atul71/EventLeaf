@@ -15,7 +15,7 @@ We have completed the following CR for this sprint.
 
 ## Backend (API)
 - Vivek Chenganassery  
-  [FE][BE]Adding Favorites/Saved events into profile page and rectifying API for the same - 6 story points
+  [FE][BE]Adding Favorites events into profile page and rectifying API for the same - 6 story points
 
 
 - Pritika Kannapiran  
