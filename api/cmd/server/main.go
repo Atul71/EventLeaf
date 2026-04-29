@@ -66,6 +66,7 @@ func main() {
 	venueHandler := handler.NewVenueHandler(venueRepo)
 	bootstrapHandler := handler.NewBootstrapHandler(userRepo)
 	authHandler := handler.NewAuthHandler(userRepo, cfg.JWTSecret, cfg.AuthCookieName, cfg.AuthCookieSecure)
+	paymentHandler := handler.NewPaymentHandler()
 
 	router := gin.Default()
 	router.GET("/health", func(c *gin.Context) {
@@ -80,6 +81,7 @@ func main() {
 		v1.POST("/login", authHandler.Login)
 		v1.POST("/signup", authHandler.Signup)
 		v1.POST("/logout", authHandler.Logout)
+		v1.POST("/payments", paymentHandler.ProcessPayment)
 
 		v1.GET("/events", eventHandler.ListEvents)
 		v1.GET("/eco-attributes", eventHandler.ListEcoAttributes)

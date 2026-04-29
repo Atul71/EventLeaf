@@ -106,6 +106,19 @@ export type BuyTicketsResponse = {
   remaining_tickets: number;
 };
 
+export type PaymentRequest = {
+  card_number: string;
+  expiry_month: number;
+  expiry_year: number;
+  cvv: string;
+  amount: number;
+};
+
+export type PaymentResponse = {
+  transaction_id: string;
+  status: string;
+};
+
 export type CreateEventPayload = {
   title: string;
   description: string;
@@ -256,6 +269,16 @@ export async function buyTicketsByEventId(eventId: string, payload: BuyTicketsPa
   });
   if (!res.ok) throw new Error(await parseError(res));
   return res.json() as Promise<BuyTicketsResponse>;
+}
+
+export async function processPayment(payload: PaymentRequest): Promise<PaymentResponse> {
+  const res = await fetch(`${API_PREFIX}/payments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json() as Promise<PaymentResponse>;
 }
 
 /** `null` = not signed in; otherwise favorited event IDs (may be empty). */

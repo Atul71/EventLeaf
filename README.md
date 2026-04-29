@@ -38,3 +38,23 @@ Once the branch is ready to be merged, raise a PR with your teammate, get it app
 PR naming convention: `Ticket-ID: Work that is done`
 - eg: `BE-101: Implemented Search Feature`
 
+## Mock Payment Cards (Development Only)
+
+Use these cards against `POST /api/v1/payments` or the ticket checkout modal.
+
+### Working cards
+
+- `4242 4242 4242 4242` | Exp: `12/30` | CVV: `123` | Expected: Success
+- `4111 1111 1111 1111` | Exp: `11/29` | CVV: `111` | Expected: Success
+- `4012 8888 8888 1881` | Exp: `10/28` | CVV: `222` | Expected: Success
+- `3782 822463 10005` | Exp: `09/27` | CVV: `321` | Expected: Success
+- `6011 1111 1111 1117` | Exp: `08/29` | CVV: `456` | Expected: Success
+- `3530 1113 3330 0000` | Exp: `07/31` | CVV: `654` | Expected: Success
+- `3056 930902 5904` | Exp: `06/28` | CVV: `777` | Expected: Success
+- `5200 8282 8282 8210` | Exp: `04/30` | CVV: `888` | Expected: Success
+
+### Error-case cards
+
+- `5555 5555 5555 4444` | Exp: `01/23` | CVV: `999` | Expected: `Card expired`
+- `4000 0000 0000 0002` | Exp: `05/26` | CVV: `100` | Expected: `Insufficient funds` for totals over `$50`
+
