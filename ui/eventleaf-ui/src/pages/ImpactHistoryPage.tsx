@@ -4,6 +4,13 @@ import { BackButton } from "../components/BackButton";
 import { Logo } from "../components/Logo";
 import { fetchCurrentUser, fetchMyEvents, type ApiEvent } from "../api/eventleafApi";
 
+/*
+ * Unit tests for this page currently verify:
+ * 1) Organizer flow renders Impact History with summary cards and event rows.
+ * 2) Derived values (including estimated paper saved) are shown for loaded data.
+ * 3) Table structure includes the "Indicators" column.
+ * 4) Empty organizer history shows the no-events CTA state.
+ */
 function formatDate(raw: string): string {
   const d = new Date(raw);
   if (Number.isNaN(d.getTime())) return raw;
