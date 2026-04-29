@@ -98,6 +98,13 @@ export function OrganizerDashboardPage() {
               type="text"
               aria-label="Search events"
             />
+            <Link
+              to="/events"
+              className="flex items-center gap-2 border border-border-green bg-white dark:bg-white/5 hover:bg-background-light dark:hover:bg-white/10 text-text-leaf dark:text-white font-bold px-5 py-2.5 rounded-lg transition-all shadow-sm"
+            >
+              <span className="material-symbols-outlined text-xl">travel_explore</span>
+              <span>Discover Events</span>
+            </Link>
             <Link to="/organizer/events/create" className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-background-dark font-bold px-5 py-2.5 rounded-lg transition-all shadow-sm">
               <span className="material-symbols-outlined text-xl">add_circle</span>
               <span>Create Event</span>

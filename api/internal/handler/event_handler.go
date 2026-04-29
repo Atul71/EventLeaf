@@ -304,6 +304,32 @@ func (h *EventHandler) ListMyEvents(c *gin.Context) {
 	c.JSON(http.StatusOK, events)
 }
 
+// ListOrganizerAnalytics returns per-event attendance/revenue stats for the signed-in organizer.
+func (h *EventHandler) ListOrganizerAnalytics(c *gin.Context) {
+	uid, ok := authUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing auth"})
+		return
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if limit < 1 || limit > 500 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	rows, err := h.eventRepo.ListOrganizerAnalytics(c.Request.Context(), uid, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load organizer analytics: " + err.Error()})
+		return
+	}
+	if rows == nil {
+		rows = []models.OrganizerEventAnalytics{}
+	}
+	c.JSON(http.StatusOK, rows)
+}
+
 // PublishEvent sets a draft (or existing) event to published so it appears in Discover.
 func (h *EventHandler) PublishEvent(c *gin.Context) {
 	uid, ok := authUserID(c)
@@ -344,6 +370,72 @@ func (h *EventHandler) PublishEvent(c *gin.Context) {
 		}
 	}
 	c.JSON(http.StatusOK, resp)
+}
+
+// UpdateDraftEvent updates a draft event owned by the signed-in organizer.
+func (h *EventHandler) UpdateDraftEvent(c *gin.Context) {
+	uid, ok := authUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing auth"})
+		return
+	}
+	eventID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	var req models.UpdateEventRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: " + err.Error()})
+		return
+	}
+
+	ctx := c.Request.Context()
+	venueIDProvided := req.VenueID != nil
+	var selectedVenue *models.Venue
+	if venueIDProvided {
+		venue, err := h.venueRepo.GetByID(ctx, *req.VenueID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Venue not found"})
+			return
+		}
+		selectedVenue = venue
+	}
+
+	var ecoNames []string
+	if len(req.EcoAttributeIDs) > 0 {
+		names, err := h.ecoAttrRepo.GetNamesByIDs(ctx, req.EcoAttributeIDs)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch eco attributes"})
+			return
+		}
+		ecoNames = names
+	}
+	metrics := service.CalculateGreenMetrics(
+		&models.Event{
+			OrganizerID:         uid,
+			TotalCapacity:       req.TotalCapacity,
+			HasDigitalTicketing: containsEcoName(ecoNames, "Paperless Ticketing"),
+			HasPaperlessCheckin: containsEcoName(ecoNames, "Digital Check-in"),
+		},
+		selectedVenue,
+		ecoNames,
+	)
+
+	updated, err := h.eventRepo.UpdateDraftForOrganizer(ctx, eventID, uid, &req, metrics.IsEcoFriendly)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Draft event not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update draft event: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, models.CreateEventResponse{
+		Event:   *updated,
+		IsGreen: metrics.IsEcoFriendly,
+	})
 }
 
 // BuyTicket creates one ticket for the signed-in user (no payment flow yet).

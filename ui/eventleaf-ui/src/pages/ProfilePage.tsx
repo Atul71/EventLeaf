@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Logo } from "../components/Logo";
 import { BackButton } from "../components/BackButton";
@@ -9,13 +9,21 @@ import { GreenTimeline } from "../components/attendee/GreenTimeline";
 import { ImpactTrophyCase } from "../components/attendee/ImpactTrophyCase";
 import { TicketStubsGallery } from "../components/attendee/TicketStubsGallery";
 import { ShareImpactCardModal } from "../components/attendee/ShareImpactCardModal";
-import { fetchMyTickets, fetchSavedEvents, unsaveEventById, type ApiEvent, type ApiTicket } from "../api/eventleafApi";
+import {
+  fetchMyTickets,
+  fetchPublishedEvents,
+  fetchSavedEvents,
+  unsaveEventById,
+  type ApiEvent,
+  type ApiTicket,
+} from "../api/eventleafApi";
+import type { TicketStubRecord } from "../mocks/attendeeImpactData";
 
 const PROFILE_IMAGE =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuDnOzVJfB7xx40z1WVf-qoPjw7WUXx4Qt82hn5m8o31QBxf9XSxKObGW976MJyh05WZVAxF4nFTES2SQy5ZW6RVELPPHYf9zceW8S4ondIFtViysJ_q6xeonlaDMCM3ov3KNtrvkAG6MTDlJHlQ59H8NDjsE0SbqlH1kSTm6KO6m8rR9GbPyowmBagTxQq_rTiZjTjoi8aK6GqGiHBfm4x6cIyTd2PaNn6_tUEuwsHw6_eyPhgv4GknPeBCM8LS4tzVgiehfVv68g";
 const AVATAR_HEADER =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuC1o3grplRRO5eHkBed9M0tQ5sur273hPulAZmZGqd6fcwGTcBwReNNPCv8mnFdHMJ9NiBwLFtKqIsICOAeo3MuL4vDvJ2ypKnaAiQ54FJr3B7gTDal34zbf1UxlCDPI6a6aXkiAPUNW0pNKCkxVxjao2OUFD5ube_IzPWc22lyukb3Ui_8K2pTD9NuFroPP0K4t9JNISrYR0fuPCzzebPEe5tnuVWOZbQp5ubQwN-J4_QkgKz_Se-SDit-ttJOa0e_ewIUpCm47RA";
-type ProfileTab = "tickets" | "impact" | "stubs" | "saved" | "settings";
+type ProfileTab = "tickets" | "impact" | "stubs" | "saved";
 
 export function ProfilePage() {
   const navigate = useNavigate();
@@ -33,6 +41,9 @@ export function ProfilePage() {
   const [myTickets, setMyTickets] = useState<ApiTicket[]>([]);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [ticketsError, setTicketsError] = useState<string | null>(null);
+  const [stubEvents, setStubEvents] = useState<ApiEvent[]>([]);
+  const [stubsLoading, setStubsLoading] = useState(false);
+  const [stubsError, setStubsError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,7 +87,7 @@ export function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab !== "tickets" || authLoading) return;
+    if ((activeTab !== "tickets" && activeTab !== "stubs") || authLoading) return;
     let cancelled = false;
     setTicketsLoading(true);
     setTicketsError(null);
@@ -94,6 +105,62 @@ export function ProfilePage() {
       cancelled = true;
     };
   }, [activeTab, authLoading]);
+
+  useEffect(() => {
+    if (activeTab !== "stubs" || authLoading) return;
+    let cancelled = false;
+    setStubsLoading(true);
+    setStubsError(null);
+    fetchPublishedEvents(500)
+      .then((data) => {
+        if (!cancelled) setStubEvents(data);
+      })
+      .catch((e: Error) => {
+        if (!cancelled) setStubsError(e.message || "Could not load event sustainability details");
+      })
+      .finally(() => {
+        if (!cancelled) setStubsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, authLoading]);
+
+  const purchasedTicketStubs = useMemo<TicketStubRecord[]>(() => {
+    const now = Date.now();
+    const eventsById = new Map(stubEvents.map((e) => [e.id, e]));
+
+    return myTickets
+      .filter((ticket) => {
+        const dateIso = ticket.event_date || ticket.purchase_date;
+        const ts = new Date(dateIso).getTime();
+        return Number.isFinite(ts) && ts < now;
+      })
+      .map((ticket) => {
+        const eventMeta = eventsById.get(ticket.event_id);
+        const sustainabilityBits: string[] = [];
+        if (eventMeta?.venue_eco_certifications?.length) {
+          sustainabilityBits.push(eventMeta.venue_eco_certifications[0]);
+        }
+        if (eventMeta?.is_eco_friendly) sustainabilityBits.push("green-verified event");
+        if (eventMeta?.has_paperless_checkin || eventMeta?.has_digital_ticketing) sustainabilityBits.push("paperless check-in");
+        if (eventMeta?.has_public_transit) sustainabilityBits.push("public transit access");
+
+        return {
+          id: ticket.id,
+          eventName: ticket.event_title || "Event",
+          dateIso: ticket.event_date || ticket.purchase_date,
+          venue: ticket.venue_name || "Venue TBD",
+          ticketId: ticket.ticket_number,
+          qrImageUrl: `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(ticket.qr_code_value)}`,
+          sustainabilityNote:
+            sustainabilityBits.length > 0
+              ? sustainabilityBits.join(" · ")
+              : "Digital ticket archived from your completed purchase",
+          co2AvoidedKg: eventMeta?.has_paperless_checkin || eventMeta?.has_digital_ticketing ? 0.2 : undefined,
+        };
+      });
+  }, [myTickets, stubEvents]);
 
   useEffect(() => {
     if (activeTab !== "saved" || authLoading) return;
@@ -120,7 +187,6 @@ export function ProfilePage() {
     editProfile: "/profile/edit",
     shareImpact: "#/profile/share-impact",
     discover: "/events",
-    impact: "#/impact",
     filter: "#/profile/filter",
   };
 
@@ -133,7 +199,7 @@ export function ProfilePage() {
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-background-light dark:bg-background-dark text-text-leaf font-display">
       <header className="sticky top-0 z-50 w-full border-b border-border-leaf bg-white/80 dark:bg-background-dark/80 backdrop-blur-md px-4 py-3 sm:px-6 md:px-20">
-        <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-2">
+        <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3 md:gap-8">
             <BackButton fallbackTo="/events" />
             <Logo />
@@ -141,45 +207,23 @@ export function ProfilePage() {
               <Link to={mockLinks.discover} className="text-sm font-semibold hover:text-primary transition-colors">
                 Discover Events
               </Link>
-              <Link to={mockLinks.impact} className="text-sm font-semibold hover:text-primary transition-colors">
-                Impact
-              </Link>
             </nav>
           </div>
-          <div className="flex flex-1 justify-end gap-2 items-center sm:gap-4">
+          <div className="flex flex-1 justify-end items-center gap-2 sm:gap-3">
             <Link
               to="/organizer"
-              className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-lg bg-soft-green dark:bg-white/10 font-bold text-sm text-text-leaf dark:text-white border border-border-leaf dark:border-white/10 hover:bg-primary hover:text-background-dark hover:border-primary transition-all"
+              className="hidden xl:inline-flex items-center justify-center gap-2 rounded-lg border border-border-leaf bg-neutral-bg px-3 py-2 text-sm font-bold text-text-leaf transition-colors hover:bg-soft-green dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
             >
               <span className="material-symbols-outlined text-xl">dashboard</span>
               Organizer Dashboard
             </Link>
             <Link
               to={mockLinks.createEvent}
-              className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-lg bg-primary font-bold text-sm text-text-leaf shadow-sm hover:brightness-105 transition-all"
+              className="hidden xl:inline-flex items-center justify-center gap-2 rounded-lg border border-border-leaf bg-neutral-bg px-3 py-2 text-sm font-bold text-text-leaf transition-colors hover:bg-soft-green dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
             >
               <span className="material-symbols-outlined text-xl">add</span>
               Create Event
             </Link>
-            <div className="hidden sm:flex max-w-xs w-full lg:max-w-[200px]">
-              <div className="relative w-full">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtext-leaf text-xl">
-                  search
-                </span>
-                <input
-                  className="w-full rounded-lg border-none bg-neutral-bg dark:bg-white/5 py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/50"
-                  placeholder="Search..."
-                  type="text"
-                />
-              </div>
-            </div>
-            <button
-              type="button"
-              className="flex size-10 items-center justify-center rounded-lg bg-neutral-bg dark:bg-white/5 text-text-leaf hover:bg-primary/20 transition-colors"
-              aria-label="Notifications"
-            >
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
             <Link
               to={mockLinks.editProfile}
               className="size-10 shrink-0 rounded-full bg-cover bg-center border-2 border-primary cursor-pointer block"
@@ -192,9 +236,10 @@ export function ProfilePage() {
                 await fetch("/api/v1/logout", { method: "POST", credentials: "include" }).catch(() => undefined);
                 navigate("/login");
               }}
-              className="rounded-lg border border-border-leaf px-3 py-2 text-xs font-bold uppercase tracking-wide text-subtext-leaf hover:bg-neutral-bg dark:border-white/10 dark:text-white"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border-leaf bg-neutral-bg px-2.5 py-2 text-xs font-bold uppercase tracking-wide text-subtext-leaf transition-colors hover:bg-soft-green dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
             >
-              Sign out
+              <span className="material-symbols-outlined text-base">logout</span>
+              <span className="hidden xl:inline">Sign out</span>
             </button>
           </div>
         </div>
@@ -247,24 +292,24 @@ export function ProfilePage() {
                     : "92nd percentile of users"}
                 </span>
               </div>
-              <div className="flex flex-wrap gap-2 w-full justify-center md:justify-end">
+              <div className="flex w-full flex-wrap gap-2 justify-center md:justify-end">
                 <Link
                   to={mockLinks.createEvent}
-                  className="lg:hidden flex items-center justify-center gap-2 px-6 py-2 rounded-lg bg-primary font-bold text-sm text-text-leaf shadow-md hover:brightness-105 transition-all flex-1 sm:flex-none"
+                  className="xl:hidden inline-flex items-center justify-center gap-2 rounded-lg border border-border-leaf bg-neutral-bg px-4 py-2 text-sm font-bold text-text-leaf transition-colors hover:bg-soft-green flex-1 sm:flex-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
                 >
                   <span className="material-symbols-outlined text-xl">add</span>
                   Create Event
                 </Link>
                 <Link
                   to={mockLinks.editProfile}
-                  className="px-4 py-2 rounded-lg bg-neutral-bg dark:bg-white/5 font-bold text-sm hover:bg-border-leaf transition-colors text-center"
+                  className="inline-flex items-center justify-center rounded-lg border border-border-leaf bg-neutral-bg px-4 py-2 text-sm font-bold text-text-leaf transition-colors hover:bg-soft-green text-center flex-1 sm:flex-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
                 >
                   Edit Profile
                 </Link>
                 <button
                   type="button"
                   onClick={() => setActiveTab("impact")}
-                  className="px-4 py-2 rounded-lg border-2 border-primary/30 font-bold text-sm hover:bg-primary/5 transition-all"
+                  className="inline-flex items-center justify-center rounded-lg border border-border-leaf bg-neutral-bg px-4 py-2 text-sm font-bold text-text-leaf transition-colors hover:bg-soft-green flex-1 sm:flex-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
                 >
                   View impact
                 </button>
@@ -349,18 +394,6 @@ export function ProfilePage() {
                 <span className="material-symbols-outlined text-lg">favorite</span>
                 Saved
               </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("settings")}
-                className={`whitespace-nowrap px-4 sm:px-6 py-3 sm:py-4 text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors shrink-0 ${
-                  activeTab === "settings"
-                    ? "border-primary text-text-leaf dark:text-white"
-                    : "border-transparent text-subtext-leaf hover:text-text-leaf"
-                }`}
-              >
-                <span className="material-symbols-outlined text-lg">settings</span>
-                Settings
-              </button>
             </div>
 
             {activeTab === "tickets" && (
@@ -437,7 +470,7 @@ export function ProfilePage() {
                   className="w-full py-3 rounded-xl border-2 border-dashed border-border-leaf text-subtext-leaf font-semibold text-sm hover:bg-white dark:hover:bg-white/5 hover:border-primary transition-all flex items-center justify-center gap-2"
                 >
                   <span className="material-symbols-outlined text-lg">history</span>
-                  Open ticket stub archive ({impact?.ticketStubs.length ?? 3} stubs)
+                  Open ticket stub archive ({purchasedTicketStubs.length} stubs)
                 </button>
               </div>
             )}
@@ -449,9 +482,24 @@ export function ProfilePage() {
               <p className="py-8 text-center text-subtext-leaf">Impact history will appear once your data loads.</p>
             )}
 
-            {activeTab === "stubs" && impact && <TicketStubsGallery stubs={impact.ticketStubs} />}
-            {activeTab === "stubs" && !impact && !impactLoading && (
-              <p className="py-8 text-center text-subtext-leaf">Ticket stubs will appear once your data loads.</p>
+            {activeTab === "stubs" && (ticketsLoading || stubsLoading) && (
+              <p className="py-8 text-center text-subtext-leaf">Loading your purchased ticket stubs…</p>
+            )}
+            {activeTab === "stubs" && (ticketsError || stubsError) && (
+              <div
+                role="alert"
+                className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-950 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
+              >
+                {ticketsError || stubsError}
+              </div>
+            )}
+            {activeTab === "stubs" && !ticketsLoading && !stubsLoading && !ticketsError && !stubsError && purchasedTicketStubs.length > 0 && (
+              <TicketStubsGallery stubs={purchasedTicketStubs} />
+            )}
+            {activeTab === "stubs" && !ticketsLoading && !stubsLoading && !ticketsError && !stubsError && purchasedTicketStubs.length === 0 && (
+              <p className="py-8 text-center text-subtext-leaf">
+                No past ticket stubs yet. Completed event purchases will appear here automatically.
+              </p>
             )}
 
             {activeTab === "saved" && (
@@ -532,9 +580,6 @@ export function ProfilePage() {
                   </ul>
                 )}
               </div>
-            )}
-            {activeTab === "settings" && (
-              <div className="py-8 text-center text-subtext-leaf">Settings content (mock)</div>
             )}
           </div>
 

@@ -10,6 +10,7 @@ import { OrganizerPlaceholderPage } from "./pages/OrganizerPlaceholderPage";
 import { EventLandingPage } from "./pages/EventLandingPage";
 import { DiscoverEventsPage } from "./pages/DiscoverEventsPage";
 import { CreateEventWizardPage } from "./pages/CreateEventWizardPage";
+import { OrganizerAnalyticsPage } from "./pages/OrganizerAnalyticsPage";
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
         <Route path="/profile/edit" element={<EditProfilePage />} />
         <Route path="/organizer" element={<OrganizerDashboardPage />} />
         <Route path="/organizer/venues" element={<VenueBrowserPage />} />
+        <Route path="/organizer/analytics" element={<OrganizerAnalyticsPage />} />
         <Route path="/events" element={<DiscoverEventsPage />} />
         <Route path="/events/:eventId" element={<EventLandingPage />} />
         <Route path="/organizer/events" element={<OrganizerPlaceholderPage />} />

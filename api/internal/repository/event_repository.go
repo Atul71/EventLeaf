@@ -126,6 +126,117 @@ func (r *EventRepository) Create(ctx context.Context, req *models.CreateEventReq
 	return &event, nil
 }
 
+func (r *EventRepository) UpdateDraftForOrganizer(
+	ctx context.Context,
+	eventID, organizerID uuid.UUID,
+	req *models.UpdateEventRequest,
+	isEcoFriendly bool,
+) (*models.Event, error) {
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	hasDigitalTicketing := false
+	hasPaperlessCheckin := false
+	if len(req.EcoAttributeIDs) > 0 {
+		rows, qerr := tx.Query(ctx,
+			`SELECT name
+			 FROM eco_attributes
+			 WHERE id = ANY($1)`,
+			req.EcoAttributeIDs,
+		)
+		if qerr != nil {
+			return nil, qerr
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var name string
+			if err := rows.Scan(&name); err != nil {
+				return nil, err
+			}
+			switch name {
+			case "Paperless Ticketing":
+				hasDigitalTicketing = true
+			case "Digital Check-in":
+				hasPaperlessCheckin = true
+			}
+		}
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+	}
+
+	var venueID interface{}
+	if req.VenueID != nil {
+		venueID = *req.VenueID
+	}
+	visibility := req.Visibility
+	if visibility == "" {
+		visibility = "public"
+	}
+	var ecoSummary *string
+	if req.EcoSummary != "" {
+		ecoSummary = &req.EcoSummary
+	}
+
+	var event models.Event
+	err = tx.QueryRow(ctx,
+		`UPDATE events
+		 SET title = $1,
+		     description = $2,
+		     venue_id = $3,
+		     event_date = $4::date,
+		     event_start_time = $5::time,
+		     event_end_time = $6::time,
+		     is_eco_friendly = $7,
+		     eco_summary = $8,
+		     ticket_price = $9,
+		     total_capacity = $10,
+		     available_tickets = $10,
+		     visibility = $11,
+		     category = NULLIF($12,''),
+		     has_digital_ticketing = $13,
+		     has_paperless_checkin = $14,
+		     updated_at = NOW()
+		 WHERE id = $15 AND organizer_id = $16 AND status = 'draft'
+		 RETURNING id, title, description, organizer_id, venue_id, event_date, event_start_time::text, event_end_time::text,
+		   is_eco_friendly, eco_summary, ticket_price, total_capacity, available_tickets,
+		   status, visibility, image_url, event_url, category, has_digital_ticketing, has_paperless_checkin,
+		   created_at, updated_at`,
+		req.Title, req.Description, venueID,
+		req.EventDate, req.EventStartTime, req.EventEndTime,
+		isEcoFriendly, ecoSummary, req.TicketPrice, req.TotalCapacity,
+		visibility, emptyToNull(req.Category), hasDigitalTicketing, hasPaperlessCheckin,
+		eventID, organizerID,
+	).Scan(
+		&event.ID, &event.Title, &event.Description, &event.OrganizerID, &event.VenueID,
+		&event.EventDate, &event.EventStartTime, &event.EventEndTime,
+		&event.IsEcoFriendly, &event.EcoSummary, &event.TicketPrice, &event.TotalCapacity, &event.AvailableTickets,
+		&event.Status, &event.Visibility, &event.ImageURL, &event.EventURL, &event.Category,
+		&event.HasDigitalTicketing, &event.HasPaperlessCheckin,
+		&event.CreatedAt, &event.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := tx.Exec(ctx, `DELETE FROM event_eco_attributes WHERE event_id = $1`, eventID); err != nil {
+		return nil, err
+	}
+	for _, attrID := range req.EcoAttributeIDs {
+		if _, err := tx.Exec(ctx, `INSERT INTO event_eco_attributes (event_id, eco_attribute_id) VALUES ($1, $2)`, eventID, attrID); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return r.GetByID(ctx, eventID)
+}
+
 const eventJoinSelect = `e.id, e.title, e.description, e.organizer_id, e.venue_id, e.event_date,
 	e.event_start_time::text, e.event_end_time::text, e.is_eco_friendly, e.eco_summary,
 	e.ticket_price, e.total_capacity, e.available_tickets, e.status, e.visibility,
@@ -231,6 +342,58 @@ func (r *EventRepository) ListByOrganizer(ctx context.Context, organizerID uuid.
 			return nil, err
 		}
 		out = append(out, *ev)
+	}
+	return out, rows.Err()
+}
+
+func (r *EventRepository) ListOrganizerAnalytics(
+	ctx context.Context,
+	organizerID uuid.UUID,
+	limit, offset int,
+) ([]models.OrganizerEventAnalytics, error) {
+	rows, err := r.db.Pool.Query(ctx, `
+		SELECT
+			e.id,
+			e.title,
+			e.event_date,
+			e.status,
+			e.is_eco_friendly,
+			e.total_capacity,
+			e.available_tickets,
+			COUNT(DISTINCT t.id)::int AS tickets_sold,
+			COUNT(DISTINCT ci.ticket_id)::int AS checked_in_count,
+			COALESCE(SUM(CASE WHEN t.status IN ('active', 'used') THEN t.price_paid ELSE 0 END), 0)::float8 AS revenue
+		FROM events e
+		LEFT JOIN tickets t ON t.event_id = e.id
+		LEFT JOIN check_ins ci ON ci.event_id = e.id
+		WHERE e.organizer_id = $1
+		GROUP BY e.id, e.title, e.event_date, e.status, e.is_eco_friendly, e.total_capacity, e.available_tickets
+		ORDER BY e.event_date DESC, e.created_at DESC
+		LIMIT $2 OFFSET $3
+	`, organizerID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]models.OrganizerEventAnalytics, 0)
+	for rows.Next() {
+		var a models.OrganizerEventAnalytics
+		if err := rows.Scan(
+			&a.EventID,
+			&a.Title,
+			&a.EventDate,
+			&a.Status,
+			&a.IsEcoFriendly,
+			&a.TotalCapacity,
+			&a.AvailableTickets,
+			&a.TicketsSold,
+			&a.CheckedInCount,
+			&a.Revenue,
+		); err != nil {
+			return nil, err
+		}
+		out = append(out, a)
 	}
 	return out, rows.Err()
 }

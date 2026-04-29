@@ -24,8 +24,11 @@ type EventRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*models.Event, error)
 	// PublishForOrganizer sets status to published when the event belongs to the organizer.
 	PublishForOrganizer(ctx context.Context, eventID, organizerID uuid.UUID) (*models.Event, error)
+	// UpdateDraftForOrganizer updates a draft owned by the organizer.
+	UpdateDraftForOrganizer(ctx context.Context, eventID, organizerID uuid.UUID, req *models.UpdateEventRequest, isEcoFriendly bool) (*models.Event, error)
 	// ListSavedByUser returns published public events bookmarked by the user.
 	ListSavedByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Event, error)
+	ListOrganizerAnalytics(ctx context.Context, organizerID uuid.UUID, limit, offset int) ([]models.OrganizerEventAnalytics, error)
 	GetEcoAttributeNamesByEventID(ctx context.Context, eventID uuid.UUID) ([]string, error)
 	BuyTicket(ctx context.Context, eventID, userID uuid.UUID, ticketType string, quantity int) ([]models.Ticket, int, error)
 	ListTicketsByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]models.Ticket, error)
