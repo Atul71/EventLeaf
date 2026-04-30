@@ -23,6 +23,7 @@ Pritika Kannapiran
 ## Full Stack (FE + BE)
 Atul Arun
 [FE][BE] QR Code Generation for Ticket System - #45
+[FE][BE] - Event Analytics Page
 
 Shane George Thomas
 [FE][BE] Payment Gateway – Secure Checkout & Mock Validator - #50
