@@ -42,7 +42,7 @@ Full lifecycle from draft to published. Create, list, and retrieve events with e
 
 ### Green Metrics & Eco-Scoring
 
-Composite sustainability score (0–100) derived from venue eco-certification, event type, and selected eco-attributes. Events scoring ≥ 70 are classified as eco-friendly.
+Composite sustainability score (0 to 100) derived from venue eco-certification, event type, and selected eco-attributes. Events scoring ≥ 70 are classified as eco-friendly.
 
 - **GreenMetrics model** — `carbon_footprint_reduction`, `energy_efficiency_score`, `waste_reduction_potential`, `transportation_impact_score`, `overall_sustainability_score`, `is_eco_friendly`, `metrics_breakdown`, `sustainability_tips`
 - **Green criteria** — requires an eco-certified venue (when a venue is provided) plus at least two qualifying sustainability attributes (Paperless Ticketing, Digital Check-in, Waste Reduction Program, Carbon Neutral Transport, Tree Planting Offset)
