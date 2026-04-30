@@ -62,5 +62,6 @@ All tickets were successfully completed.
 N/A — all planned tickets shipped this sprint.
 
 # Backend readme
+https://github.com/Atul71/EventLeaf/blob/main/api/README.md
 
 # Links to YouTube videos
