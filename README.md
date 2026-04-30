@@ -154,7 +154,7 @@ Use these cards in checkout (or `POST /api/v1/payments`).
 - Vivek Chenganassery
 - Shane George Thomas
 
-## Roles
+### Roles
 
 Each team member contributes to both frontend and backend development, alternating responsibilities throughout project sprints.
 
