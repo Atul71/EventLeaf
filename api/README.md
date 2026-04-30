@@ -33,6 +33,7 @@ Cookie-based JWT sessions. On successful login or signup a `Set-Cookie` header w
 Full lifecycle from draft to published. Create, list, and retrieve events with eco-metadata. Organizers can list all their events (drafts + published) and publish a draft in one call.
 
 - `POST /api/v1/events` — create event, evaluate Green criteria, optionally sync to Google Calendar
+- `PUT /api/v1/events/:id` — update an existing draft event
 - `GET /api/v1/events` — list all published public events (paginated)
 - `GET /api/v1/events/:id` — get event by UUID (draft/private events require the organizer's session)
 - `POST /api/v1/events/:id/publish` — publish a draft event
@@ -72,6 +73,26 @@ Authenticated users can bookmark published public events.
 - `POST /api/v1/me/saved-events/:eventId` — add bookmark — `204 No Content`
 - `DELETE /api/v1/me/saved-events/:eventId` — remove bookmark — `204 No Content`
 
+### Ticketing & Check-In
+
+Authenticated users can buy tickets for published events and view their own tickets. Organizers can check in attendees at event entry.
+
+- `POST /api/v1/events/:id/tickets` — buy ticket(s) for an event
+- `GET /api/v1/me/tickets` — list tickets for the signed-in user
+- `POST /api/v1/events/:id/check-in` — organizer check-in by ticket number or QR value
+
+### Organizer Analytics / Impact History
+
+Organizers can fetch event-level sustainability history for dashboard/trend views.
+
+- `GET /api/v1/organizer/analytics` — list organizer analytics records (supports pagination)
+
+### Payments (Mock Gateway)
+
+Development-only mock card processing endpoint used by ticketing flows and demos.
+
+- `POST /api/v1/payments` — validates card payload and returns mock transaction result
+
 ### Google Calendar Sync (optional)
 
 When `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REFRESH_TOKEN` are set, published events are automatically synced to the configured Google Calendar. Sync failures are reported in `calendar_sync_error` without failing the HTTP create/publish response.
@@ -98,6 +119,12 @@ Base URL: `http://localhost:3000`. All versioned routes are prefixed with `/api/
 | `POST` | `/api/v1/signup` | None | Create account with `username`, `email`, `password`, `is_organizer`, `is_eco_conscious` |
 | `POST` | `/api/v1/logout` | None | Clears the session cookie |
 
+### Payments (mock)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/v1/payments` | None | Mock card payment processing endpoint used for demos and local development |
+
 ### Events (public / optional auth)
 
 | Method | Path | Auth | Description |
@@ -112,9 +139,13 @@ Base URL: `http://localhost:3000`. All versioned routes are prefixed with `/api/
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | `POST` | `/api/v1/events` | Required | Create event; `organizer_id` must match the signed-in user |
+| `PUT` | `/api/v1/events/:id` | Required | Update a draft event owned by the signed-in organizer |
 | `POST` | `/api/v1/events/:id/publish` | Required | Publish a draft event and trigger Google Calendar sync |
 | `GET` | `/api/v1/organizer/events` | Required | List all events (draft + published) for the signed-in organizer (`limit` default 100 max 500) |
+| `GET` | `/api/v1/organizer/analytics` | Required | List sustainability/impact history analytics for the signed-in organizer |
 | `GET` | `/api/v1/me/events` | Required | Alias for `GET /organizer/events` |
+| `POST` | `/api/v1/events/:id/tickets` | Required | Buy one or more tickets for an event |
+| `POST` | `/api/v1/events/:id/check-in` | Required | Organizer check-in endpoint by `ticket_number` or `qr_code_value` |
 
 ### Eco Attributes
 
@@ -138,6 +169,7 @@ Base URL: `http://localhost:3000`. All versioned routes are prefixed with `/api/
 |--------|------|------|-------------|
 | `GET` | `/api/v1/me` | Required | Get the signed-in user's full profile |
 | `PATCH` | `/api/v1/me` | Required | Partial update: `first_name`, `last_name`, `phone` (10 digits), `bio`, `profile_image_url` (max 500 chars), `is_eco_conscious` |
+| `GET` | `/api/v1/me/tickets` | Required | List tickets owned by the signed-in user |
 
 ### Saved Events / Favourites (JWT required)
 
@@ -212,6 +244,32 @@ Base URL: `http://localhost:3000`. All versioned routes are prefixed with `/api/
     "selected_eco_attributes": ["Paperless Ticketing", "Digital Check-in"]
   },
   "sustainability_tips": ["Use public transit", "Go digital"]
+}
+```
+
+### `POST /api/v1/events/:id/check-in` — request body
+
+At least one of `ticket_number` or `qr_code_value` is required. `qr_code_value` format is `eventleaf:ticket:<ticket_uuid>`.
+
+```json
+{
+  "ticket_number": "EL-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "qr_code_value": "eventleaf:ticket:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "check_in_method": "manual",
+  "notes": "Main gate"
+}
+```
+
+### `POST /api/v1/events/:id/check-in` — response (`200`)
+
+```json
+{
+  "checked_in": true,
+  "already_used": false,
+  "ticket_number": "EL-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "event_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "checked_in_at": "2026-04-29T22:00:00Z",
+  "message": "Ticket checked in successfully"
 }
 ```
 
